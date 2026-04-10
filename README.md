@@ -1,2 +1,2 @@
-# trainingplanner
-Training planner
+# Practice planner
+Practice planner
