@@ -78,7 +78,8 @@ main{max-width:980px;margin:0 auto;padding:1.5rem 1.5rem 3rem;}
 .panel{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow);}
 .panel-title{font-size:11px;font-family:'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:1rem;font-weight:normal;}
 .two-col{display:grid;grid-template-columns:300px 1fr;gap:1.25rem;margin-bottom:1.5rem;}
-@media(max-width:700px){.two-col{grid-template-columns:1fr;}}
+.att-col{grid-template-columns:minmax(200px,5fr) minmax(200px,4fr);}
+@media(max-width:700px){.two-col,.att-col{grid-template-columns:1fr;}}
 .add-form{display:flex;flex-direction:column;gap:8px;}
 .section-sep{height:1.1rem;}
 .input-row{display:flex;gap:6px;}
@@ -189,10 +190,13 @@ input:focus,select:focus{border-color:var(--accent);}
 .pool-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:var(--surface);border:0.5px solid var(--border-strong);font-family:'Helvetica Neue',sans-serif;font-size:13px;color:var(--text);cursor:grab;transition:box-shadow 0.1s;}
 .pool-chip:hover{box-shadow:0 2px 8px rgba(0,0,0,0.1);}
 .pool-chip.dragging{opacity:0.4;}
-.traning-band{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:8px 0 14px;border-bottom:1px solid var(--border);margin-bottom:1.25rem;}
+.traning-band{padding:8px 0 0;border-bottom:1px solid var(--border);margin-bottom:1.25rem;}
+.traning-band-row1{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-bottom:8px;}
+.traning-band-row2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 0 9px;border-top:1px solid var(--border);}
 .traning-band-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .traning-band-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.traning-band-label{font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;}
+.traning-band-divider{width:1px;height:22px;background:var(--border-strong);flex-shrink:0;}
+.traning-band-label{font-size:11px;color:var(--text-faint);font-family:'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:0.06em;margin-right:2px;}
 .btn:disabled{opacity:0.38;cursor:not-allowed;pointer-events:none;}
 .image-upload-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:var(--radius);border:1px solid var(--border-strong);background:transparent;color:var(--text);cursor:pointer;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;white-space:nowrap;transition:background 0.12s;}
 .image-upload-btn:hover{background:var(--surface2);}
@@ -247,15 +251,22 @@ input:focus,select:focus{border-color:var(--accent);}
   <!-- TRÄNINGSINFO-BAND — visas bara under Planera träning -->
   <div id="traningBand" style="display:none;">
     <div class="traning-band">
-      <div class="traning-band-left">
-        <span class="traning-band-label">Datum</span>
-        <input type="date" id="practiceDate" onchange="save()" style="height:30px;font-size:13px;width:145px;"/>
-        <button class="btn sm" style="margin-left:4px;" onclick="nyTraning()" title="Nollställ träningen och börja om">&#8635; Ny träning</button>
+      <!-- Rad 1: Datum + Ny träning (vänster) | Ladda + Spara (höger) -->
+      <div class="traning-band-row1">
+        <div class="traning-band-left">
+          <input type="date" id="practiceDate" onchange="save()" style="height:30px;font-size:13px;width:145px;"/>
+          <button class="btn sm" onclick="nyTraning()" title="Nollställ träningen och börja om">&#8635; Ny träning</button>
+        </div>
+        <div class="traning-band-divider"></div>
+        <div class="traning-band-right">
+          <button class="btn sm" onclick="loadPracticeFile()" title="Ladda en sparad träning">&#8593; Ladda träning</button>
+          <input type="file" id="loadPracticeInput" accept=".json" style="display:none" onchange="loadPracticeFromFile(event)"/>
+          <button class="btn sm primary" onclick="savePracticeFile()" title="Spara träningen som fil">&#8595; Spara träning</button>
+        </div>
       </div>
-      <div class="traning-band-right">
-        <button class="btn sm" onclick="loadPracticeFile()" title="Ladda en sparad träning">&#8593; Ladda sparad träning</button>
-        <input type="file" id="loadPracticeInput" accept=".json" style="display:none" onchange="loadPracticeFromFile(event)"/>
-        <button class="btn sm primary" onclick="savePracticeFile()" title="Spara träningen som fil">&#8595; Spara träning</button>
+      <!-- Rad 2: Utdata-knappar (hela bredden) -->
+      <div class="traning-band-row2">
+        <span class="traning-band-label">Resultat</span>
         <button class="btn sm" id="textOutputBtn" onclick="showTextOutput()" disabled title="Generera grupper först">&#128203; Kopiera text</button>
         <button class="btn sm" id="cardOutputBtn" onclick="showPracticeCard()" disabled title="Generera grupper först">&#128247; Träningskort</button>
       </div>
@@ -273,7 +284,7 @@ input:focus,select:focus{border-color:var(--accent);}
     <!-- ATTENDANCE -->
     <div id="sub-attendance">
       <div id="attSummary"></div>
-      <div class="two-col">
+      <div class="two-col att-col">
         <div class="panel">
           <p class="panel-title">Spelare</p>
           <div class="scroll-list" id="attPlayerList"><div class="empty-state">Inga spelare i truppen.</div></div>
@@ -281,7 +292,6 @@ input:focus,select:focus{border-color:var(--accent);}
             <button class="btn sm" onclick="setAllAtt('players','yes')">&#10003; Alla med</button>
             <button class="btn sm" onclick="setAllAtt('players','no')">&#10005; Alla borta</button>
             <button class="btn sm" onclick="setAllAtt('players','unknown')">Nollställ</button>
-            <button class="btn sm" onclick="sortByAttendance('players')">&#8693; Sortera</button>
           </div>
         </div>
         <div class="panel">
@@ -291,7 +301,6 @@ input:focus,select:focus{border-color:var(--accent);}
             <button class="btn sm" onclick="setAllAtt('coaches','yes')">&#10003; Alla med</button>
             <button class="btn sm" onclick="setAllAtt('coaches','no')">&#10005; Alla borta</button>
             <button class="btn sm" onclick="setAllAtt('coaches','unknown')">Nollställ</button>
-            <button class="btn sm" onclick="sortByAttendance('coaches')">&#8693; Sortera</button>
           </div>
         </div>
       </div>
