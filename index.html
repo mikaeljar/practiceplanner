@@ -144,7 +144,8 @@ input:focus,select:focus{border-color:var(--accent);}
 .badge.c{background:var(--c-bg);color:var(--c-txt);}
 .badge.goalie{background:var(--goalie-bg);color:var(--goalie-txt);}
 .badge.coach{background:var(--coach-bg);color:var(--coach-txt);}
-.scroll-list{max-height:400px;overflow-y:auto;}
+.badge.pos{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border-strong);}
+.badge.pos.null-pos{color:var(--text-faint);}
 /* Group settings */
 .group-settings{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem;box-shadow:var(--shadow);}
 .settings-grid{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;}
@@ -351,8 +352,15 @@ input:focus,select:focus{border-color:var(--accent);}
               <option value="random">Slumpmässig</option>
             </select>
           </div>
+          <div class="field" id="usePositionsGroupWrap" style="display:none;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="groupUsePositions" style="width:16px;height:16px;cursor:pointer;" onchange="if(this.checked){document.getElementById('groupSize').value='5';}save();"/>
+              Ta hänsyn till position
+            </label>
+          </div>
           <button class="btn primary" onclick="generateGroups()">Generera grupper</button>
           <button class="btn" onclick="clearGroups()">Rensa</button>
+          <button class="btn" id="addGroupBtn" style="display:none;" onclick="addEmptyGroup()">+ Grupp</button>
         </div>
       </div>
 
@@ -373,7 +381,7 @@ input:focus,select:focus{border-color:var(--accent);}
       <!-- Unassigned pool -->
       <div id="unassignedPool" style="display:none;">
         <div class="unassigned-pool">
-          <div class="pool-title">Otilldelad — dra till en grupp</div>
+      <div class="pool-title" id="poolTitle">Otilldelad — dra till en grupp</div>
           <div class="pool-players" id="poolPlayers"></div>
         </div>
       </div>
@@ -451,6 +459,15 @@ input:focus,select:focus{border-color:var(--accent);}
           <button class="btn sm" onclick="document.getElementById('importInput').click()">&#8593; Importera</button>
           <input type="file" id="importInput" accept=".json" style="display:none" onchange="importRoster(event)"/>
           <button class="btn sm danger" onclick="clearRoster()">&#10005; Rensa allt</button>
+        </div>
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+          <label style="display:flex;align-items:center;gap:8px;font-family:'Helvetica Neue',sans-serif;font-size:13px;color:var(--text);cursor:pointer;">
+            <input type="checkbox" id="usePositionsToggle" onchange="toggleUsePositions()" style="width:16px;height:16px;cursor:pointer;"/>
+            Använd positioner
+          </label>
+          <div id="setAllForwardWrap" style="display:none;margin-top:8px;">
+            <button class="btn sm" onclick="setAllForward()">Sätt alla utan position till Forward</button>
+          </div>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:1.25rem;">
@@ -541,6 +558,7 @@ input:focus,select:focus{border-color:var(--accent);}
 // station: { label, coaches: [coachId,...] }
 let players=[],coaches=[],groups=[],poolPlayers=[],goaliesInGroup=[];
 let practiceImageData=null; // base64 data URL of uploaded practice image
+let usePositions=false; // global toggle: show/use player positions
 const STORAGE_KEY='hockey-planner-v5';
 
 // Fixed stations always present (Off-ice, Målvaktstränare) + dynamic numbered stations
@@ -591,9 +609,12 @@ function save(){
     // Store groups/goalies/pool by player NAME (not ID) so they survive reload
     const coachNameById=id=>coaches.find(c=>String(c.id)===String(id))?.name||null;
     const data={
-      players:players.map(({name,number,level,attendance})=>({name,number,level,attendance})),
+      players:players.map(({name,number,level,attendance,position})=>({name,number,level,attendance,position:position||null})),
       coaches:coaches.map(({name,coachType,attendance})=>({name,coachType,attendance})),
       numStations,
+      usePositions,
+      groupUsePositions:document.getElementById('groupUsePositions')?.checked||false,
+      groupSize:parseInt(document.getElementById('groupSize')?.value||'6',10),
       stations:stations.map(({label,drill,coaches:sc,fixed})=>({
         label,drill,fixed,
         coachNames:sc.map(id=>coachNameById(id)).filter(Boolean)
@@ -620,8 +641,11 @@ function loadFromStorage(){
     if(!raw)return false;
     const d=JSON.parse(raw);
     // Players & coaches — give fresh IDs on every load
-    if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','goalie'].includes(p.level)).map(p=>({id:uid(),name:p.name,number:p.number||'',level:p.level,attendance:p.attendance||'unknown'}));
+    if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','goalie'].includes(p.level)).map(p=>({id:uid(),name:p.name,number:p.number||'',level:p.level,attendance:p.attendance||'unknown',position:p.position||null}));
     if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
+    if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
+    if(typeof d.groupUsePositions==='boolean'){try{const el=document.getElementById('groupUsePositions');if(el)el.checked=d.groupUsePositions;}catch(e){}}
+    if(d.groupSize){try{const el=document.getElementById('groupSize');if(el)el.value=d.groupSize;}catch(e){}}
     // Helper: find coach ID by name in the freshly-created coaches array
     const coachIdByName=name=>coaches.find(c=>c.name===name)?.id||null;
     // Stations
@@ -670,7 +694,7 @@ function loadFromHash(){
   try{
     const hash=window.location.hash;if(!hash.startsWith('#roster='))return false;
     const d=JSON.parse(decodeURIComponent(escape(atob(hash.slice(8)))));
-    if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','goalie'].includes(p.level)).map(p=>({id:uid(),name:p.name,number:p.number||'',level:p.level,attendance:p.attendance||'unknown'}));
+    if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','goalie'].includes(p.level)).map(p=>({id:uid(),name:p.name,number:p.number||'',level:p.level,attendance:p.attendance||'unknown',position:p.position||null}));
     if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
     if(d.stations)d.stations.forEach((ds,i)=>{if(stations[i]){stations[i].drill=ds.drill||'';stations[i].coaches=ds.coaches||[];}});
     return !!(players.length||coaches.length);
@@ -883,6 +907,26 @@ function onDropGoalie(e){
   save();renderGroups();renderGoaliePanel();
 }
 
+function posLabel(pos){return pos==='forward'?'FW':pos==='center'?'C':pos==='back'?'B':'—';}
+function posOrder(pos){return pos==='forward'?0:pos==='center'?1:pos==='back'?2:3;}
+function toggleUsePositions(){
+  usePositions=document.getElementById('usePositionsToggle').checked;
+  document.getElementById('setAllForwardWrap').style.display=usePositions?'block':'none';
+  save();renderAll();
+  if(currentSub==='attendance')renderAttendance();
+  if(currentSub==='groups')renderGroupsInfo();
+}
+function setPlayerPosition(id,pos){
+  const p=players.find(x=>x.id===id);if(p){p.position=pos;save();renderRoster();}
+}
+function setAllForward(){
+  players.filter(p=>!p.position&&p.level!=='goalie').forEach(p=>p.position='forward');
+  save();renderRoster();
+}
+function rosterPositionChange(sel){
+  const id=Number(sel.dataset.id);
+  setPlayerPosition(id,sel.value||null);
+}
 function attHTML(type,id,att){
   return `<div class="att-toggle">
     <button class="att-btn att-yes${att==='yes'?' active':''}" data-type="${type}" data-id="${id}" data-val="yes" onclick="attBtnClick(this)">In</button>
@@ -948,6 +992,7 @@ function renderRoster(){
   document.getElementById('rosterCount').textContent=players.length;
   document.getElementById('coachCount').textContent=coaches.length;
   const LEVELS=['a','b','c','goalie'];
+  const POSITIONS=[{v:'',l:'—'},{v:'forward',l:'Forward'},{v:'center',l:'Center'},{v:'back',l:'Back'}];
   document.getElementById('playerList').innerHTML=!players.length?'<div class="empty-state">Inga spelare ännu.</div>':
     sortedPlayers().map(p=>`<div class="roster-item">
       <span class="item-num-badge">${p.number?'#'+p.number:''}</span>
@@ -955,6 +1000,9 @@ function renderRoster(){
       <select class="level-sel" data-id="${p.id}" style="width:70px;height:24px;font-size:11px;padding:0 4px;" onchange="rosterLevelChange(this)">
         ${LEVELS.map(l=>`<option value="${l}"${p.level===l?' selected':''}>${levelLabel(l)}</option>`).join('')}
       </select>
+      ${usePositions&&p.level!=='goalie'?`<select data-id="${p.id}" style="width:75px;height:24px;font-size:11px;padding:0 4px;" onchange="rosterPositionChange(this)">
+        ${POSITIONS.map(po=>`<option value="${po.v}"${(p.position||'')===(po.v)?' selected':''}>${po.l}</option>`).join('')}
+      </select>`:''}
       <div class="item-actions"><button class="btn icon-btn danger" data-id="${p.id}" onclick="rosterRemovePlayer(this)" title="Ta bort">&#10005;</button></div>
     </div>`).join('');
   const CTYPES=['on-ice','off-ice','goalie-coach'];
@@ -991,6 +1039,7 @@ function renderAttendance(){
       <span class="item-num-badge">${p.number?'#'+p.number:''}</span>
       <span class="item-name">${esc(p.name)}</span>
       <span class="badge ${p.level}">${levelLabel(p.level)}</span>
+      ${usePositions&&p.level!=='goalie'?`<span class="badge pos${!p.position?' null-pos':''}">${posLabel(p.position)}</span>`:''}
       <div class="item-actions">${attHTML('player',p.id,p.attendance)}</div>
     </div>`).join('');
   document.getElementById('attCoachList').innerHTML=!coaches.length?'<div class="empty-state">Inga ledare i truppen.</div>':
@@ -1003,7 +1052,10 @@ function renderAttendance(){
 
 function renderGroupsInfo(){
   const unk=players.filter(p=>p.attendance==='unknown'&&p.level!=='goalie').length;
-  document.getElementById('groupsInfoBox').innerHTML=unk?`<div class="info-box">${unk} fältspelare${unk>1?' saknar':' saknar'} närvaro och kommer att exkluderas från grupperna.</div>`:'';
+  document.getElementById('groupsInfoBox').innerHTML=unk?`<div class="info-box">${unk} spelare saknar närvaro och kommer att exkluderas från grupperna.</div>`:'';
+  // Show/hide position checkbox in groups
+  const wrap=document.getElementById('usePositionsGroupWrap');
+  if(wrap)wrap.style.display=usePositions?'flex':'none';
 }
 
 // ── Jersey colours ────────────────────────────────────────────────────
@@ -1032,43 +1084,120 @@ function generateGroups(){
   }
   const size=Math.max(1,parseInt(document.getElementById('groupSize').value)||6);
   const method=document.getElementById('groupMethod').value;
-  let pool=[...fieldIn];
-  if(method==='random'){
-    pool=shuffle(pool);
-  } else if(method==='level'){
-    // Sort pool: all A together, all B together, all C together.
-    // Shuffle within each level so the same players aren't always first.
-    // Then shuffle which numbered group (1,2,3) each level-group gets —
-    // so A-players aren't always Grupp 1.
-    const a=shuffle(pool.filter(p=>p.level==='a'));
-    const b=shuffle(pool.filter(p=>p.level==='b'));
-    const c=shuffle(pool.filter(p=>p.level==='c'));
-    pool=[...a,...b,...c];
-  } else {
-    // Mixed: interleave shuffled levels
-    const a=shuffle(pool.filter(p=>p.level==='a'));
-    const b=shuffle(pool.filter(p=>p.level==='b'));
-    const c=shuffle(pool.filter(p=>p.level==='c'));
-    pool=interleave([a,b,c]);
-  }
+  const posMode=usePositions&&document.getElementById('groupUsePositions')?.checked;
+
   groups=[];poolPlayers=[];
-  for(let i=0;i<pool.length;i+=size){
-    const grpPlayers=pool.slice(i,i+size);
-    const half=Math.ceil(grpPlayers.length/2);
-    grpPlayers.forEach((p,j)=>{p.jerseyColour=j<half?COL1:COL2;});
-    groups.push({players:grpPlayers,colour:COL1,colour2:COL2,fullColour:false});
+
+  if(posMode){
+    // Position-aware grouping
+    // Players without position go straight to fallback pool
+    const withPos=fieldIn.filter(p=>p.position);
+    const noPos=fieldIn.filter(p=>!p.position);
+
+    // Shuffle each position pool
+    const forwards=shuffle(withPos.filter(p=>p.position==='forward'));
+    const centers=shuffle(withPos.filter(p=>p.position==='center'));
+    const backs=shuffle(withPos.filter(p=>p.position==='back'));
+
+    const numGroups=Math.max(1,Math.floor(fieldIn.length/size));
+
+    // Ideal slots per group per position based on group size:
+    // FW: floor(size/2), C: 1, B: floor(size/2)
+    // But never more than ceil(count/numGroups) — no point reserving slots for players that don't exist
+    const idealFW=Math.floor(size/2);
+    const idealC=1;
+    const idealB=Math.floor(size/2);
+    const fwSlots=Math.min(idealFW,Math.ceil(forwards.length/numGroups)||1);
+    const cSlots=Math.min(idealC,Math.ceil(centers.length/numGroups)||1);
+    const bSlots=Math.min(idealB,Math.ceil(backs.length/numGroups)||1);
+
+    // Assign unique colours to each group
+    const groupColours=JERSEY_COLOURS.map(c=>c.hex);
+    const buckets=Array.from({length:numGroups},(_,i)=>({
+      players:[],
+      colour:groupColours[i%groupColours.length],
+      colour2:groupColours[i%groupColours.length],
+      fullColour:true,
+      fwCount:0,cCount:0,bCount:0
+    }));
+
+    const leftover=[];
+    const distribute=(pool,slotKey,slotMax)=>{
+      let gi=0;
+      // Single pass: fill up to slotMax per group, rest goes to pool
+      pool.forEach(p=>{
+        let placed=false;
+        for(let attempt=0;attempt<numGroups;attempt++){
+          const b=buckets[(gi+attempt)%numGroups];
+          if(b[slotKey]<slotMax){
+            b.players.push(p);
+            b[slotKey]++;
+            gi=(gi+attempt+1)%numGroups;
+            placed=true;
+            break;
+          }
+        }
+        if(!placed)leftover.push(p);
+      });
+    };
+
+    distribute(forwards,'fwCount',fwSlots);
+    distribute(centers,'cCount',cSlots);
+    distribute(backs,'bCount',bSlots);
+
+    // Set group colour on all players
+    buckets.forEach(g=>g.players.forEach(p=>p.jerseyColour=g.colour));
+
+    // Shuffle bucket order
+    groups=shuffle(buckets).filter(g=>g.players.length>0);
+
+    // All leftovers + players without position go to pool
+    poolPlayers=[...noPos,...leftover];
+
+  } else {
+    // Original grouping logic
+    let pool=[...fieldIn];
+    if(method==='random'){
+      pool=shuffle(pool);
+    } else if(method==='level'){
+      const a=shuffle(pool.filter(p=>p.level==='a'));
+      const b=shuffle(pool.filter(p=>p.level==='b'));
+      const c=shuffle(pool.filter(p=>p.level==='c'));
+      pool=[...a,...b,...c];
+    } else {
+      const a=shuffle(pool.filter(p=>p.level==='a'));
+      const b=shuffle(pool.filter(p=>p.level==='b'));
+      const c=shuffle(pool.filter(p=>p.level==='c'));
+      pool=interleave([a,b,c]);
+    }
+    for(let i=0;i<pool.length;i+=size){
+      const grpPlayers=pool.slice(i,i+size);
+      const half=Math.ceil(grpPlayers.length/2);
+      grpPlayers.forEach((p,j)=>{p.jerseyColour=j<half?COL1:COL2;});
+      groups.push({players:grpPlayers,colour:COL1,colour2:COL2,fullColour:false});
+    }
+    if(method==='level')groups=shuffle(groups);
   }
-  // For level-based grouping: shuffle which group is Grupp 1, 2, 3
-  // so A-players don't always end up in the same numbered group
-  if(method==='level') groups=shuffle(groups);
+
   document.getElementById('textOutputBtn').disabled=false;
   document.getElementById('cardOutputBtn').disabled=false;
+  const addGroupBtn=document.getElementById('addGroupBtn');
+  if(addGroupBtn)addGroupBtn.style.display='';
   save();
   renderStationer();
   renderGoaliePanel();
   renderGroups();
 }
 
+function addEmptyGroup(){
+  const usedColours=groups.map(g=>g.colour);
+  // Pick next colour not already used, or cycle through if all used
+  const nextColour=JERSEY_COLOURS.map(c=>c.hex).find(h=>!usedColours.includes(h))
+    ||JERSEY_COLOURS[groups.length%JERSEY_COLOURS.length].hex;
+  const posMode=usePositions&&document.getElementById('groupUsePositions')?.checked;
+  groups.push({players:[],colour:nextColour,colour2:nextColour,fullColour:posMode});
+  save();renderGroups();
+}
 function clearGroups(){
   groups=[];poolPlayers=[];goaliesInGroup=[];
   document.getElementById('groupsArea').innerHTML='<div class="empty-state">Markera närvaro först, generera sedan grupper.</div>';
@@ -1076,6 +1205,8 @@ function clearGroups(){
   document.getElementById('unassignedPool').style.display='none';
   document.getElementById('textOutputBtn').disabled=true;
   document.getElementById('cardOutputBtn').disabled=true;
+  const addGroupBtn=document.getElementById('addGroupBtn');
+  if(addGroupBtn)addGroupBtn.style.display='none';
   save();
   renderGoaliePanel();
   renderStationer();
@@ -1123,7 +1254,7 @@ function renderGroups(){
           ondragover="onDragOver(event,${gi})"
           ondrop="onDrop(event,${gi})"
           ondragleave="onDragLeave(event,${gi})">
-          ${g.players.map(p=>{
+          ${(usePositions&&document.getElementById('groupUsePositions')?.checked?sortedGroupPlayersByPosition(g):g.players).map(p=>{
             const jc=g.fullColour?g.colour:(p.jerseyColour||g.colour);
             return `<div class="group-player${p.attendance==='no'?' absent-warning':''}" draggable="true" data-pid="${p.id}" data-gi="${gi}"
               ondragstart="playerDragStart(event)" ondragend="onDragEnd(event)">
@@ -1131,6 +1262,7 @@ function renderGroups(){
                 title="${g.fullColour?'Full colour mode':'Click to switch jersey'}"
                 data-pid="${p.id}" data-gi="${gi}"
                 onclick="jerseyBtnClick(event)"></button>
+              ${usePositions&&p.level!=='goalie'?`<button class="badge pos${!p.position?' null-pos':''}" style="cursor:pointer;border:none;" title="Klicka för att ändra position" onclick="togglePlayerPosition(${gi},'${p.id}')">${posLabel(p.position)}</button>`:''}
               <span class="gp-name${p.attendance==='no'?' absent':''}">${esc(p.name)}</span>
               ${p.number?`<span class="gp-num">#${esc(p.number)}</span>`:''}
               ${p.attendance==='no'?'<span class="absent-icon" title="Markerad som borta — flytta spelaren">⚠️</span>':''}
@@ -1143,6 +1275,13 @@ function renderGroups(){
   }).join('')}</div>`;
 
   document.getElementById('unassignedPool').style.display='block';
+  const poolTitle=document.getElementById('poolTitle');
+  if(poolTitle){
+    const posMode=usePositions&&document.getElementById('groupUsePositions')?.checked;
+    poolTitle.textContent=posMode
+      ?'Ej fördelade (saknar position eller ojämnt antal) — dra till en grupp'
+      :'Otilldelad — dra till en grupp';
+  }
   renderPool();
   document.addEventListener('click',closeAllColourPickers,{once:true});
 }
@@ -1157,7 +1296,9 @@ function renderPool(){
   }
   pp.innerHTML=poolPlayers.map(p=>`<div class="pool-chip" draggable="true" data-pid="${p.id}"
     ondragstart="poolDragStart(event)" ondragend="onDragEnd(event)">
-    <span class="badge ${p.level}" style="padding:1px 5px">${levelLabel(p.level)}</span>${esc(p.name)}
+    <span class="badge ${p.level}" style="padding:1px 5px">${levelLabel(p.level)}</span>
+    ${usePositions&&p.level!=='goalie'?`<span class="badge pos${!p.position?' null-pos':''}">${posLabel(p.position)}</span>`:''}
+    ${esc(p.name)}
   </div>`).join('');
 }
 
@@ -1209,6 +1350,35 @@ function sortedGroupPlayers(g){
   const col1=g.players.filter(p=>(p.jerseyColour||g.colour)===g.colour);
   const col2=g.players.filter(p=>(p.jerseyColour||g.colour)!==g.colour);
   return [...col1,...col2];
+}
+function togglePlayerPosition(gi,pid){
+  const g=groups[gi];
+  const p=g.players.find(pl=>String(pl.id)===String(pid));
+  if(!p)return;
+  const cycle={forward:'center',center:'back',back:'forward',null:'forward'};
+  p.position=cycle[p.position||'null'];
+  save();renderGroups();
+}
+
+// Returns players sorted by position order for display (FW, C, FW, B, B)
+function sortedGroupPlayersByPosition(g){
+  const fw=g.players.filter(p=>p.position==='forward');
+  const c=g.players.filter(p=>p.position==='center');
+  const b=g.players.filter(p=>p.position==='back');
+  const none=g.players.filter(p=>!p.position);
+  // Interleave: FW, C, FW, B, B pattern
+  const result=[];
+  const maxLen=Math.max(fw.length,c.length,b.length);
+  let fi=0,ci=0,bi=0;
+  // Build in pattern: fw, c, fw, b, b repeating
+  while(fi<fw.length||ci<c.length||bi<b.length){
+    if(fi<fw.length)result.push(fw[fi++]);
+    if(ci<c.length)result.push(c[ci++]);
+    if(fi<fw.length)result.push(fw[fi++]);
+    if(bi<b.length)result.push(b[bi++]);
+    if(bi<b.length)result.push(b[bi++]);
+  }
+  return [...result,...none];
 }
 function assignJerseyOnDrop(g,player){
   if(g.fullColour){player.jerseyColour=g.colour;return;}
@@ -1479,8 +1649,9 @@ async function savePracticeFile(){
       label,drill,fixed,
       coachNames:sc.map(id=>coaches.find(c=>String(c.id)===String(id))?.name||null).filter(Boolean)
     })),
-    players:players.map(({name,number,level,attendance})=>({name,number,level,attendance})),
+    players:players.map(({name,number,level,attendance,position})=>({name,number,level,attendance,position:position||null})),
     coaches:coaches.map(({name,coachType,attendance})=>({name,coachType,attendance})),
+    usePositions,
     groups:groups.map(g=>({
       colour:g.colour,colour2:g.colour2,fullColour:g.fullColour,
       players:g.players.map(p=>({name:p.name,number:p.number||'',level:p.level,jerseyColour:p.jerseyColour}))
@@ -1533,8 +1704,11 @@ function loadPracticeFromFile(evt){
       const d=JSON.parse(e.target.result);
       if(!d.version||d.version<5){alert('Felaktigt filformat. Spara träningen på nytt med den nya versionen.');return;}
       // Restore players & coaches
-      if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','goalie'].includes(p.level)).map(p=>({id:uid(),name:p.name,number:p.number||'',level:p.level,attendance:p.attendance||'unknown'}));
+      if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','goalie'].includes(p.level)).map(p=>({id:uid(),name:p.name,number:p.number||'',level:p.level,attendance:p.attendance||'unknown',position:p.position||null}));
       if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
+      if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
+      if(typeof d.groupUsePositions==='boolean'){try{const el=document.getElementById('groupUsePositions');if(el)el.checked=d.groupUsePositions;}catch(e){}}
+      if(d.groupSize){try{const el=document.getElementById('groupSize');if(el)el.value=d.groupSize;}catch(e){}}
       // Restore stations
       if(d.numStations){numStations=d.numStations;stations=makeStations();}
       if(d.stations){
@@ -1581,6 +1755,8 @@ function loadPracticeFromFile(evt){
       if(groups.length){
         document.getElementById('textOutputBtn').disabled=false;
         document.getElementById('cardOutputBtn').disabled=false;
+        const addGroupBtn=document.getElementById('addGroupBtn');
+        if(addGroupBtn)addGroupBtn.style.display='';
         renderGroups();renderGoaliePanel();
       }
       renderStationer();
@@ -1594,7 +1770,7 @@ function loadPracticeFromFile(evt){
 let exportBlob=null;
 function exportRoster(){
   const data={version:4,exportedAt:new Date().toISOString(),
-    players:players.map(({name,number,level,attendance})=>({name,number,level,attendance})),
+    players:players.map(({name,number,level,attendance,position})=>({name,number,level,attendance,position:position||null})),
     coaches:coaches.map(({name,coachType,attendance})=>({name,coachType,attendance}))};
   const json=JSON.stringify(data,null,2);
   document.getElementById('exportPreview').value=json;
@@ -1614,7 +1790,7 @@ function importRoster(evt){
     try{
       const d=JSON.parse(e.target.result);
       const newP=(d.players||[]).filter(p=>p.name&&['a','b','c','goalie'].includes(p.level))
-        .map(p=>({id:uid(),name:p.name,number:p.number||'',level:p.level,attendance:p.attendance||'unknown'}));
+        .map(p=>({id:uid(),name:p.name,number:p.number||'',level:p.level,attendance:p.attendance||'unknown',position:p.position||null}));
       const newC=(d.coaches||[]).filter(c=>c.name)
         .map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
       if(!newP.length&&!newC.length){alert('Inga giltiga data hittades.');return;}
@@ -1627,7 +1803,7 @@ function importRoster(evt){
 }
 function shareLink(){
   if(!players.length&&!coaches.length){alert('Lägg till spelare eller ledare först.');return;}
-  const data={v:4,players:players.map(({name,number,level,attendance})=>({name,number,level,attendance})),
+  const data={v:4,players:players.map(({name,number,level,attendance,position})=>({name,number,level,attendance,position:position||null})),
     coaches:coaches.map(({name,coachType,attendance})=>({name,coachType,attendance}))};
   const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
   const url=location.href.split('?')[0].split('#')[0]+'#roster='+encoded;
@@ -1689,9 +1865,20 @@ const fromLink=loadFromHash();
 const fromStorage=!fromLink&&loadFromStorage();
 renderAll();
 renderAttendance();
+// Sync usePositions toggle AFTER load so state is correct
+try{
+  const tog=document.getElementById('usePositionsToggle');
+  if(tog)tog.checked=usePositions;
+  const wrap=document.getElementById('setAllForwardWrap');
+  if(wrap)wrap.style.display=usePositions?'block':'none';
+  const groupWrap=document.getElementById('usePositionsGroupWrap');
+  if(groupWrap)groupWrap.style.display=usePositions?'flex':'none';
+}catch(e){}
 if(groups.length){
   document.getElementById('textOutputBtn').disabled=false;
   document.getElementById('cardOutputBtn').disabled=false;
+  const addGroupBtn=document.getElementById('addGroupBtn');
+  if(addGroupBtn)addGroupBtn.style.display='';
 }
 if(fromLink){save();showBanner('Trupp laddad från länk — '+players.length+' spelare, '+coaches.length+' ledare.','var(--a-bg)','var(--a-txt)');}
 else if(fromStorage){showBanner('Senaste träningen återställd — '+players.length+' spelare, '+coaches.length+' ledare.','var(--accent-light)','var(--accent-text)');}
