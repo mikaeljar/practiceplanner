@@ -22,6 +22,8 @@
   --a-bg:#eaf3de;--a-txt:#27500a;
   --b-bg:#faeeda;--b-txt:#633806;
   --c-bg:#e6f1fb;--c-txt:#0c447c;
+  --d-bg:#fbeaf0;--d-txt:#72243e;
+  --e-bg:#e1f5ee;--e-txt:#085041;
   --goalie-bg:#f3eefe;--goalie-txt:#3c2a7a;
   --coach-bg:#fef3e2;--coach-txt:#7a4a00;
   --on-bg:#eaf3de;--on-txt:#3b6d11;
@@ -39,6 +41,8 @@
   --a-bg:#17340420;--a-txt:#97c459;
   --b-bg:#41240220;--b-txt:#ef9f27;
   --c-bg:#042c5320;--c-txt:#85b7eb;
+  --d-bg:#4b152820;--d-txt:#ed93b1;
+  --e-bg:#04342c20;--e-txt:#5dcaa5;
   --goalie-bg:#26215c30;--goalie-txt:#afa9ec;
   --coach-bg:#3a2a0020;--coach-txt:#fac775;
   --on-bg:#17340420;--on-txt:#97c459;
@@ -54,6 +58,8 @@ html[data-theme="dark"]{
   --a-bg:#17340420;--a-txt:#97c459;
   --b-bg:#41240220;--b-txt:#ef9f27;
   --c-bg:#042c5320;--c-txt:#85b7eb;
+  --d-bg:#4b152820;--d-txt:#ed93b1;
+  --e-bg:#04342c20;--e-txt:#5dcaa5;
   --goalie-bg:#26215c30;--goalie-txt:#afa9ec;
   --coach-bg:#3a2a0020;--coach-txt:#fac775;
   --on-bg:#17340420;--on-txt:#97c459;
@@ -69,6 +75,8 @@ html[data-theme="light"]{
   --a-bg:#eaf3de;--a-txt:#27500a;
   --b-bg:#faeeda;--b-txt:#633806;
   --c-bg:#e6f1fb;--c-txt:#0c447c;
+  --d-bg:#fbeaf0;--d-txt:#72243e;
+  --e-bg:#e1f5ee;--e-txt:#085041;
   --goalie-bg:#f3eefe;--goalie-txt:#3c2a7a;
   --coach-bg:#fef3e2;--coach-txt:#7a4a00;
   --on-bg:#eaf3de;--on-txt:#3b6d11;
@@ -144,6 +152,8 @@ input:focus,select:focus{border-color:var(--accent);}
 .badge.a{background:var(--a-bg);color:var(--a-txt);}
 .badge.b{background:var(--b-bg);color:var(--b-txt);}
 .badge.c{background:var(--c-bg);color:var(--c-txt);}
+.badge.d{background:var(--d-bg);color:var(--d-txt);}
+.badge.e{background:var(--e-bg);color:var(--e-txt);}
 .badge.goalie{background:var(--goalie-bg);color:var(--goalie-txt);}
 .badge.coach{background:var(--coach-bg);color:var(--coach-txt);}
 .badge.pos{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border-strong);}
@@ -507,6 +517,10 @@ input:focus,select:focus{border-color:var(--accent);}
               <option value="a">A</option>
               <option value="b" selected>B</option>
               <option value="c">C</option>
+              <option value="d">D</option>
+              <option value="e">E</option>
+              <option value="d">D</option>
+              <option value="e">E</option>
             </select>
             <select id="playerPosition">
               <option value="">— Position —</option>
@@ -668,6 +682,7 @@ input:focus,select:focus{border-color:var(--accent);}
     <div class="action-sheet-handle"></div>
     <div class="action-sheet-label">Flytta spelare</div>
     <div class="action-sheet-player" id="actionSheetPlayerName"></div>
+    <div id="actionSheetSub" style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:12px;margin-top:-10px;"></div>
     <div id="actionSheetGroups"></div>
     <button class="action-sheet-cancel" onclick="closeActionSheet()">Avbryt</button>
   </div>
@@ -775,7 +790,7 @@ const ICO={
 };
 function uid(){return Date.now()*1000+Math.floor(Math.random()*1000);}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function levelOrder(l){return l==='a'?0:l==='b'?1:l==='c'?2:3;}
+function levelOrder(l){return l==='a'?0:l==='b'?1:l==='c'?2:l==='d'?3:l==='e'?4:5;}
 function levelLabel(l){return l==='goalie'?'MV':l.toUpperCase();}
 function coachTypeLabel(t){return t==='off-ice'?'Off-ice':t==='goalie-coach'?'Målvaktstränare':'Isledare';}
 function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
@@ -841,7 +856,7 @@ function loadFromStorage(){
     if(!raw)return false;
     const d=JSON.parse(raw);
     // Players & coaches — give fresh IDs on every load
-    if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','goalie'].includes(p.level)).map(p=>{const isLegacyGoalie=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:isLegacyGoalie?'b':p.level,attendance:p.attendance||'unknown',position:isLegacyGoalie?'goalie':(p.position||null)};});
+    if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','d','e','goalie'].includes(p.level)).map(p=>{const isLegacyGoalie=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:isLegacyGoalie?'b':p.level,attendance:p.attendance||'unknown',position:isLegacyGoalie?'goalie':(p.position||null)};});
     if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
     if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
     if(typeof d.groupUsePositions==='boolean'){try{const el=document.getElementById('groupUsePositions');if(el)el.checked=d.groupUsePositions;}catch(e){}}
@@ -1211,7 +1226,7 @@ function renderRoster(){
   document.getElementById('rosterCount').textContent=players.length;
   document.getElementById('coachCount').textContent=coaches.length;
   const touch=_isTouch();
-  const LEVELS=['a','b','c'];
+  const LEVELS=['a','b','c','d','e'];
   const POSITIONS=[{v:'',l:'— Position —'},{v:'forward',l:'Forward'},{v:'center',l:'Center'},{v:'back',l:'Back'},{v:'goalie',l:'Målvakt'}];
   document.getElementById('playerList').innerHTML=!players.length?'<div class="empty-state">Inga spelare ännu.</div>':
     sortedPlayers().map(p=>{
@@ -1355,8 +1370,17 @@ const COL1='#3b82f6',COL2='#eab308';
 // ── Generate groups ───────────────────────────────────────────────────
 function generateGroups(){
   renderGroupsInfo();
-  goaliesInGroup=players.filter(p=>p.position==='goalie'&&p.attendance==='yes').map(p=>p.id);
-  const fieldIn=players.filter(p=>p.position!=='goalie'&&p.attendance==='yes');
+  // Preserve players already manually placed in goalie zone
+  // Only add actual goalies who aren't already there
+  const realGoalieIds=players.filter(p=>p.position==='goalie'&&p.attendance==='yes').map(p=>p.id);
+  realGoalieIds.forEach(id=>{if(!goaliesInGroup.includes(id))goaliesInGroup.push(id);});
+  // Remove any goalies who are now absent
+  goaliesInGroup=goaliesInGroup.filter(id=>{
+    const p=players.find(p=>String(p.id)===String(id));
+    return p&&p.attendance==='yes';
+  });
+  // Exclude ALL players in goaliesInGroup from field distribution
+  const fieldIn=players.filter(p=>p.attendance==='yes'&&!goaliesInGroup.includes(p.id));
   if(!fieldIn.length&&!goaliesInGroup.length){
     document.getElementById('groupsArea').innerHTML='<div class="empty-state">No players marked as attending.</div>';
     document.getElementById('unassignedPool').style.display='none';
@@ -1578,36 +1602,53 @@ function openActionSheet(pid,fromGi,fromZone){
   const player=findPlayer(pid)||players.find(p=>String(p.id)===String(pid));
   if(!player)return;
 
+  const isAbsent=player.attendance==='no';
   document.getElementById('actionSheetPlayerName').textContent=player.name+(player.number?' (#'+player.number+')':'');
+
+  // Update subtitle
+  const subEl=document.getElementById('actionSheetSub');
+  if(subEl){
+    subEl.textContent=isAbsent?'Markerad som frånvarande':'Flytta till grupp';
+    subEl.style.color=isAbsent?'var(--warn-txt)':'var(--text-muted)';
+  }
 
   const posMode=usePositions&&document.getElementById('groupUsePositions')?.checked;
   let html='';
 
-  // Destination: each existing group
+  // If absent — show remove button first, grey out groups
+  if(isAbsent&&fromZone==='group'){
+    html+=`<button class="action-sheet-btn" style="background:var(--danger-bg);border-color:var(--danger-txt);color:var(--danger-txt);"
+      onclick="removeAbsentFromGroup('${pid}',${fromGi})">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;"><path d="M7 2.5L12 11H2L7 2.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 6v2.5M7 10h.01" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <span>Ta bort</span>
+    </button>`;
+  }
+
+  // Groups — dimmed if absent
   groups.forEach((g,gi)=>{
     const isCurrent=fromZone==='group'&&fromGi===gi;
     const bar=g.fullColour
       ?`background:${g.colour}`
       :`background:linear-gradient(90deg,${g.colour} 50%,${g.colour2} 50%)`;
-    html+=`<button class="action-sheet-btn${isCurrent?' current-group':''}"
-      onclick="actionSheetMove('${pid}',${gi},'${fromZone}',${fromGi})">
+    html+=`<button class="action-sheet-btn${isCurrent?' current-group':''}${isAbsent?' current-group':''}"
+      onclick="${isAbsent?'':` actionSheetMove('${pid}',${gi},'${fromZone}',${fromGi})`}">
       <div class="as-dot" style="${bar}"></div>
       <span>Grupp ${gi+1} (${g.players.length}p)</span>
       ${isCurrent?'<span class="as-current-lbl">nuvarande</span>':''}
     </button>`;
   });
 
-  // Destination: pool (only if not already in pool)
-  if(fromZone!=='pool'){
+  // Remove from group / pool button (non-absent)
+  if(fromZone!=='pool'&&!isAbsent){
     html+=`<button class="action-sheet-btn" onclick="actionSheetMove('${pid}','pool','${fromZone}',${fromGi})">
-      <div class="as-dot" style="background:var(--text-faint);"></div>
-      <span>Otilldelad</span>
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="flex-shrink:0;"><rect x="1" y="1" width="8" height="8" rx="1.5" stroke="var(--text-faint)" stroke-width="1.2" stroke-dasharray="2 1.5"/></svg>
+      <span style="color:var(--text-muted);">Ta bort från grupp</span>
     </button>`;
   }
 
-  // Destination: goalie zone — always show at bottom (for all players)
+  // Goalie zone
   const goalieZoneVisible=players.filter(p=>p.position==='goalie'&&p.attendance==='yes').length>0;
-  if(goalieZoneVisible&&fromZone!=='goalie'){
+  if(goalieZoneVisible&&fromZone!=='goalie'&&!isAbsent){
     html+=`<button class="action-sheet-btn" onclick="actionSheetMove('${pid}','goalie','${fromZone}',${fromGi})">
       <div class="as-dot" style="background:var(--goalie-txt);"></div>
       <span>Målvakter</span>
@@ -1626,7 +1667,7 @@ function closeActionSheet(){
 function openPlayerSheet(id){
   const p=players.find(x=>String(x.id)===String(id));if(!p)return;
   document.getElementById('playerSheetName').textContent=p.name+(p.number?' (#'+p.number+')':'');
-  const LEVELS=['a','b','c'];
+  const LEVELS=['a','b','c','d','e'];
   const POSITIONS=[{v:'',l:'—'},{v:'forward',l:'Forward'},{v:'center',l:'Center'},{v:'back',l:'Back'},{v:'goalie',l:'Målvakt'}];
   const isGoalie=p.position==='goalie';
   let html='';
@@ -1706,6 +1747,15 @@ function coachSheetDelete(id){
   save();renderAll();
 }
 document.getElementById('coachSheetOverlay').addEventListener('click',function(e){if(e.target===this)closeCoachSheet();});
+
+function removeAbsentFromGroup(pid,fromGi){
+  closeActionSheet();
+  // Remove from all groups, pool and goalie zone — do NOT add to pool
+  groups.forEach(g=>{g.players=g.players.filter(p=>String(p.id)!==String(pid));});
+  poolPlayers=poolPlayers.filter(p=>String(p.id)!==String(pid));
+  goaliesInGroup=goaliesInGroup.filter(id=>String(id)!==String(pid));
+  save();renderGroups();renderGoaliePanel();
+}
 
 function actionSheetMove(pid,toGi,fromZone,fromGi){
   closeActionSheet();
@@ -2242,7 +2292,7 @@ function loadPracticeFromFile(evt){
       const d=JSON.parse(e.target.result);
       if(!d.version||d.version<5){alert('Felaktigt filformat. Spara träningen på nytt med den nya versionen.');return;}
       // Restore players & coaches
-      if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','goalie'].includes(p.level)).map(p=>{const isLegacyGoalie=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:isLegacyGoalie?'b':p.level,attendance:p.attendance||'unknown',position:isLegacyGoalie?'goalie':(p.position||null)};});
+      if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','d','e','goalie'].includes(p.level)).map(p=>{const isLegacyGoalie=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:isLegacyGoalie?'b':p.level,attendance:p.attendance||'unknown',position:isLegacyGoalie?'goalie':(p.position||null)};});
       if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
       if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
       if(typeof d.groupUsePositions==='boolean'){try{const el=document.getElementById('groupUsePositions');if(el)el.checked=d.groupUsePositions;}catch(e){}}
@@ -2445,7 +2495,7 @@ async function applyTraningDrive(fileId){
 
 function loadPracticeData(d,name){
   if(!d.version||d.version<5){showBanner('Felaktigt filformat','var(--warn-bg)','var(--warn-txt)');return;}
-  if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','goalie'].includes(p.level))
+  if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','d','e','goalie'].includes(p.level))
     .map(p=>{const ig=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:ig?'b':p.level,attendance:p.attendance||'unknown',position:ig?'goalie':(p.position||null)};});
   if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
   if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
@@ -2601,7 +2651,7 @@ async function applyRosterDrive(fileId){
 }
 
 function loadRosterData(d,name){
-  const newP=(d.players||[]).filter(p=>p.name&&['a','b','c','goalie'].includes(p.level))
+  const newP=(d.players||[]).filter(p=>p.name&&['a','b','c','d','e','goalie'].includes(p.level))
     .map(p=>{const ig=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:ig?'b':p.level,attendance:p.attendance||'unknown',position:ig?'goalie':(p.position||null)};});
   const newC=(d.coaches||[]).filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
   if(!newP.length&&!newC.length){showBanner('Inga giltiga data hittades','var(--warn-bg)','var(--warn-txt)');return;}
@@ -2831,7 +2881,7 @@ function importRoster(evt){
   reader.onload=e=>{
     try{
       const d=JSON.parse(e.target.result);
-      const newP=(d.players||[]).filter(p=>p.name&&['a','b','c','goalie'].includes(p.level))
+      const newP=(d.players||[]).filter(p=>p.name&&['a','b','c','d','e','goalie'].includes(p.level))
         .map(p=>{const isLegacyGoalie=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:isLegacyGoalie?'b':p.level,attendance:p.attendance||'unknown',position:isLegacyGoalie?'goalie':(p.position||null)};});
       const newC=(d.coaches||[]).filter(c=>c.name)
         .map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
@@ -3227,7 +3277,7 @@ async function driveLoadPractice(fileId,filename){
     const d=await driveLoadFile(fileId);
     if(!d.version||d.version<5){throw new Error('Felaktigt filformat.');}
     // Same logic as loadPracticeFromFile
-    if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','goalie'].includes(p.level))
+    if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','d','e','goalie'].includes(p.level))
       .map(p=>{const ig=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:ig?'b':p.level,attendance:p.attendance||'unknown',position:ig?'goalie':(p.position||null)};});
     if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
     if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
@@ -3308,7 +3358,7 @@ async function driveLoadRoster(fileId,filename){
   document.getElementById('driveModalBody').innerHTML=`<p style="color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;font-size:13px;">Laddar ${esc(filename)}...</p>`;
   try{
     const d=await driveLoadFile(fileId);
-    const newP=(d.players||[]).filter(p=>p.name&&['a','b','c','goalie'].includes(p.level))
+    const newP=(d.players||[]).filter(p=>p.name&&['a','b','c','d','e','goalie'].includes(p.level))
       .map(p=>{const ig=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:ig?'b':p.level,attendance:p.attendance||'unknown',position:ig?'goalie':(p.position||null)};});
     const newC=(d.coaches||[]).filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
     if(!newP.length&&!newC.length){throw new Error('Inga giltiga data hittades.');}
