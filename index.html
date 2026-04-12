@@ -2437,10 +2437,11 @@ async function driveGetFolder(){
   if(driveFolderId)return driveFolderId;
   const q=encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
   const r=await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&includeItemsFromAllDrives=true&supportsAllDrives=true&corpora=allDrives`,
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&includeItemsFromAllDrives=true&supportsAllDrives=true`,
     {headers:{Authorization:'Bearer '+driveAccessToken}});
   const d=await r.json();
-  if(d.files&&d.files.length>0){driveFolderId=d.files[0].id;return driveFolderId;}
+  console.log('[Drive] folder search result:', JSON.stringify(d));
+  if(d.files&&d.files.length>0){driveFolderId=d.files[0].id;console.log('[Drive] using folder id:',driveFolderId);return driveFolderId;}
   // No shared folder found — create own
   const cr=await fetch('https://www.googleapis.com/drive/v3/files',{
     method:'POST',
@@ -2448,6 +2449,7 @@ async function driveGetFolder(){
     body:JSON.stringify({name:DRIVE_FOLDER_NAME,mimeType:'application/vnd.google-apps.folder'})
   });
   const cd=await cr.json();
+  console.log('[Drive] created folder:', JSON.stringify(cd));
   driveFolderId=cd.id;
   return driveFolderId;
 }
@@ -2460,6 +2462,7 @@ async function driveListFiles(prefix){
     `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime%20desc&includeItemsFromAllDrives=true&supportsAllDrives=true`,
     {headers:{Authorization:'Bearer '+driveAccessToken}});
   const d=await r.json();
+  console.log('[Drive] listFiles prefix='+prefix+' folderId='+fid+' result:', JSON.stringify(d));
   return d.files||[];
 }
 
