@@ -1264,14 +1264,9 @@ function rosterRemoveCoach(btn){removeCoach(Number(btn.dataset.id));}
 
 function resortAttList(type){
   if(type==='players'){
-    document.getElementById('attPlayerList').innerHTML=!players.length?'<div class="empty-state">Inga spelare i truppen.</div>':
-      sortedPlayersAtt().map(p=>`<div class="roster-item${p.attendance==='no'?' absent':''}">
-        <span class="item-num-badge">${p.number?'#'+p.number:''}</span>
-        <span class="item-name">${esc(p.name)}</span>
-        ${p.position!=='goalie'?`<span class="badge ${p.level}">${p.level.toUpperCase()}</span>`:''}
-        <span class="badge ${p.position==='goalie'?'goalie':'pos'}${!p.position&&p.position!=='goalie'?' null-pos':''}">${posLabel(p.position)}</span>
-        <div class="item-actions">${attHTML('player',p.id,p.attendance)}</div>
-      </div>`).join('');
+    document.getElementById('attPlayerList').innerHTML=!players.length
+      ?'<div class="empty-state">Inga spelare i truppen.</div>'
+      :sortedPlayersAtt().map(attPlayerRowHTML).join('');
   } else {
     document.getElementById('attCoachList').innerHTML=!coaches.length?'<div class="empty-state">Inga ledare i truppen.</div>':
       sortedCoachesAtt().map(c=>`<div class="roster-item${c.attendance==='no'?' absent':''}">
@@ -1312,17 +1307,21 @@ function renderAttSummary(){
     :'';
 }
 
+function attPlayerRowHTML(p){
+  return `<div class="roster-item${p.attendance==='no'?' absent':''}">
+    ${p.number?`<span class="item-num-badge">#${esc(p.number)}</span>`:''}
+    <span class="item-name">${esc(p.name)}</span>
+    ${usePositions?`<span class="badge ${p.position==='goalie'?'goalie':'pos'}${!p.position&&p.position!=='goalie'?' null-pos':''}">${posLabel(p.position)}</span>`:''}
+    <div class="item-actions">${attHTML('player',p.id,p.attendance)}</div>
+  </div>`;
+}
+
 function renderAttendance(){
   renderAttSummary();
 
-  document.getElementById('attPlayerList').innerHTML=!players.length?'<div class="empty-state">Inga spelare i truppen.</div>':
-    sortedPlayersAtt().map(p=>`<div class="roster-item${p.attendance==='no'?' absent':''}">
-      <span class="item-num-badge">${p.number?'#'+p.number:''}</span>
-      <span class="item-name">${esc(p.name)}</span>
-      ${p.position!=='goalie'?`<span class="badge ${p.level}">${p.level.toUpperCase()}</span>`:''}
-      <span class="badge ${p.position==='goalie'?'goalie':'pos'}${!p.position&&p.position!=='goalie'?' null-pos':''}">${posLabel(p.position)}</span>
-      <div class="item-actions">${attHTML('player',p.id,p.attendance)}</div>
-    </div>`).join('');
+  document.getElementById('attPlayerList').innerHTML=!players.length
+    ?'<div class="empty-state">Inga spelare i truppen.</div>'
+    :sortedPlayersAtt().map(attPlayerRowHTML).join('');
   document.getElementById('attCoachList').innerHTML=!coaches.length?'<div class="empty-state">Inga ledare i truppen.</div>':
     sortedCoachesAtt().map(c=>`<div class="roster-item${c.attendance==='no'?' absent':''}">
       <span class="item-name">${esc(c.name)}</span>
