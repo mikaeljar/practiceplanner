@@ -374,6 +374,7 @@ input:focus,select:focus{border-color:var(--accent);}
               <button class="btn sm" onclick="setAllAtt('players','yes')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M2.5 6.5l3 3 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Alla in</button>
               <button class="btn sm" onclick="setAllAtt('players','no')"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M2 2l7 7M9 2L2 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Alla ut</button>
               <button class="btn sm" onclick="setAllAtt('players','unknown')">Nollst.</button>
+              <button class="btn sm" onclick="resortAttList('players')" title="Sortera om listan"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M2 4h9M2 6.5h6M2 9h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10 7v4M8.5 9.5L10 11l1.5-1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             </div>
           </div>
           <div id="attSummary"></div>
@@ -386,6 +387,7 @@ input:focus,select:focus{border-color:var(--accent);}
               <button class="btn sm" onclick="setAllAtt('coaches','yes')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M2.5 6.5l3 3 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Alla in</button>
               <button class="btn sm" onclick="setAllAtt('coaches','no')"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M2 2l7 7M9 2L2 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Alla ut</button>
               <button class="btn sm" onclick="setAllAtt('coaches','unknown')">Nollst.</button>
+              <button class="btn sm" onclick="resortAttList('coaches')" title="Sortera om listan"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M2 4h9M2 6.5h6M2 9h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10 7v4M8.5 9.5L10 11l1.5-1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             </div>
           </div>
           <div id="attCoachSummary"></div>
@@ -951,7 +953,23 @@ function setAtt(type,id,val){
   const prevAtt=item.attendance;
   item.attendance=item.attendance===val?'unknown':val;
   save();renderStats();
-  if(currentSub==='attendance')renderAttendance();
+  // Update only the affected row instead of re-rendering entire list
+  if(currentSub==='attendance'){
+    // Update toggle buttons for this item
+    const toggleBtns=document.querySelectorAll(`.att-btn[data-type="${type}"][data-id="${id}"]`);
+    toggleBtns.forEach(btn=>{
+      const isYes=btn.dataset.val==='yes';
+      const isNo=btn.dataset.val==='no';
+      btn.classList.toggle('active',
+        (isYes&&item.attendance==='yes')||(isNo&&item.attendance==='no'));
+    });
+    // Update absent class on the row
+    const row=toggleBtns.length?toggleBtns[0].closest('.roster-item'):null;
+    if(row)row.classList.toggle('absent',item.attendance==='no');
+    // Re-render stats summary only
+    renderAttSummary();
+    renderGroupsInfo();
+  }
   // If a player was just set to attend (from no/unknown) and not in any group → add to pool
   if(type==='player'&&item.attendance==='yes'&&prevAtt!=='yes'&&groups.length){
     const inGroup=groups.some(g=>g.players.some(p=>p.id===item.id));
@@ -1243,7 +1261,27 @@ function rosterRemovePlayer(btn){removePlayer(Number(btn.dataset.id));}
 function rosterCoachTypeChange(sel){const id=Number(sel.dataset.id);setCoachType(id,sel.value);}
 function rosterRemoveCoach(btn){removeCoach(Number(btn.dataset.id));}
 
-function renderAttendance(){
+function resortAttList(type){
+  if(type==='players'){
+    document.getElementById('attPlayerList').innerHTML=!players.length?'<div class="empty-state">Inga spelare i truppen.</div>':
+      sortedPlayersAtt().map(p=>`<div class="roster-item${p.attendance==='no'?' absent':''}">
+        <span class="item-num-badge">${p.number?'#'+p.number:''}</span>
+        <span class="item-name">${esc(p.name)}</span>
+        ${p.position!=='goalie'?`<span class="badge ${p.level}">${p.level.toUpperCase()}</span>`:''}
+        <span class="badge ${p.position==='goalie'?'goalie':'pos'}${!p.position&&p.position!=='goalie'?' null-pos':''}">${posLabel(p.position)}</span>
+        <div class="item-actions">${attHTML('player',p.id,p.attendance)}</div>
+      </div>`).join('');
+  } else {
+    document.getElementById('attCoachList').innerHTML=!coaches.length?'<div class="empty-state">Inga ledare i truppen.</div>':
+      sortedCoachesAtt().map(c=>`<div class="roster-item${c.attendance==='no'?' absent':''}">
+        <span class="item-name">${esc(c.name)}</span>
+        <span class="badge coach">${coachTypeLabel(c.coachType)}</span>
+        <div class="item-actions">${attHTML('coach',c.id,c.attendance)}</div>
+      </div>`).join('');
+  }
+}
+
+function renderAttSummary(){
   const pIn=players.filter(p=>p.attendance==='yes');
   const pOut=players.filter(p=>p.attendance==='no');
   const pUnk=players.filter(p=>p.attendance==='unknown');
@@ -1251,20 +1289,19 @@ function renderAttendance(){
   const cOut=coaches.filter(c=>c.attendance==='no');
   const cUnk=coaches.filter(c=>c.attendance==='unknown');
 
-  // Player summary
-  document.getElementById('attSummary').innerHTML=
+  const attSummaryEl=document.getElementById('attSummary');
+  if(attSummaryEl)attSummaryEl.innerHTML=
     `<div style="font-family:'Helvetica Neue',sans-serif;font-size:12px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap;margin-bottom:0.6rem;">
       <span><span class="att-dot on"></span><b style="color:var(--text);">${pIn.length}</b> Kommer</span>
       <span><span class="att-dot off"></span><b style="color:var(--text);">${pOut.length}</b> Kommer inte</span>
       <span><span class="att-dot unk"></span><b style="color:var(--text);">${pUnk.length}</b> Ej svarat</span>
     </div>`;
 
-  // Coach summary — per type for those coming, then combined for no/unknown
   const coachSummaryParts=[];
-  const types=['on-ice','off-ice','goalie-coach'];
-  types.forEach(t=>{
-    const n=cIn.filter(c=>c.coachType===t).length;
-    if(n>0)coachSummaryParts.push(`<span><span class="att-dot on" style="background:var(--coach-txt)"></span><b style="color:var(--text);">${n}</b> ${coachTypeLabel(t)}</span>`);
+  const typeOrder=['on-ice','goalie-coach','off-ice'];
+  typeOrder.forEach(t=>{
+    const cnt=cIn.filter(c=>c.coachType===t).length;
+    if(cnt)coachSummaryParts.push(`<span><span class="att-dot on"></span><b style="color:var(--text);">${cnt}</b> ${coachTypeLabel(t)}</span>`);
   });
   if(cOut.length)coachSummaryParts.push(`<span><span class="att-dot off"></span><b style="color:var(--text);">${cOut.length}</b> Kommer inte</span>`);
   if(cUnk.length)coachSummaryParts.push(`<span><span class="att-dot unk"></span><b style="color:var(--text);">${cUnk.length}</b> Ej svarat</span>`);
@@ -1272,6 +1309,10 @@ function renderAttendance(){
   if(coachSummaryEl)coachSummaryEl.innerHTML=coachSummaryParts.length
     ?`<div style="font-family:'Helvetica Neue',sans-serif;font-size:12px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap;margin-bottom:0.6rem;">${coachSummaryParts.join('')}</div>`
     :'';
+}
+
+function renderAttendance(){
+  renderAttSummary();
 
   document.getElementById('attPlayerList').innerHTML=!players.length?'<div class="empty-state">Inga spelare i truppen.</div>':
     sortedPlayersAtt().map(p=>`<div class="roster-item${p.attendance==='no'?' absent':''}">
