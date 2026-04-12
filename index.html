@@ -2363,7 +2363,7 @@ const DRIVE_SCOPES='https://www.googleapis.com/auth/drive.file';
 const DRIVE_FOLDER_NAME='HHC Träningar';
 let driveAccessToken=null;
 let driveUserName=null;
-let driveFolderId=null;
+let driveFolderId=localStorage.getItem('hhc-drive-folder-id')||null;
 
 // Init — restore token from sessionStorage if present
 (function initDrive(){
@@ -2383,19 +2383,12 @@ let driveFolderId=null;
 function updateDriveBtn(){
   const lbl=document.getElementById('driveBtnLabel');
   if(!lbl)return;
-  if(driveAccessToken){
-    lbl.textContent=driveUserName?driveUserName.split(' ')[0]:'Drive';
-  } else {
-    lbl.textContent='Anslut Drive';
-  }
+  lbl.textContent=driveAccessToken?(driveUserName?driveUserName.split(' ')[0]:'Drive'):'Anslut Drive';
 }
 
 function driveButtonClick(){
-  if(driveAccessToken){
-    showDriveMenu();
-  } else {
-    driveSignIn();
-  }
+  if(driveAccessToken) showDriveMenu();
+  else driveSignIn();
 }
 
 function driveSignIn(){
@@ -2406,17 +2399,17 @@ function driveSignIn(){
       if(resp.error){showBanner('Inloggning misslyckades: '+resp.error,'var(--danger-bg)','var(--danger-txt)');return;}
       driveAccessToken=resp.access_token;
       const expires=Date.now()+(resp.expires_in-60)*1000;
-      // Fetch user name
       fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+driveAccessToken}})
         .then(r=>r.json()).then(info=>{
           driveUserName=info.name||info.email||'Drive';
           sessionStorage.setItem('drive_token',JSON.stringify({token:driveAccessToken,expires,name:driveUserName}));
           updateDriveBtn();
           showBanner('Inloggad som '+driveUserName,'var(--on-bg)','var(--on-txt)');
-          driveFolderId=null; // reset so we re-fetch folder
+          showDriveMenu();
         }).catch(()=>{
           sessionStorage.setItem('drive_token',JSON.stringify({token:driveAccessToken,expires,name:'Drive'}));
           updateDriveBtn();
+          showDriveMenu();
         });
     }
   });
@@ -2425,74 +2418,78 @@ function driveSignIn(){
 
 function driveSignOut(){
   google.accounts.oauth2.revoke(driveAccessToken,()=>{});
-  driveAccessToken=null;driveUserName=null;driveFolderId=null;
+  driveAccessToken=null;driveUserName=null;
   sessionStorage.removeItem('drive_token');
   updateDriveBtn();
   closeModal('driveModal');
   showBanner('Utloggad från Google Drive','var(--accent-light)','var(--accent-text)');
 }
 
-// Get or create HHC Träningar folder — prioritizes shared folder over own
+// Get folder ID — uses stored ID or prompts user to enter one
 async function driveGetFolder(){
   if(driveFolderId)return driveFolderId;
+  showDriveFolderSetup();
+  return null;
+}
 
-  const headers={Authorization:'Bearer '+driveAccessToken};
-  const folderMime='application/vnd.google-apps.folder';
+function showDriveFolderSetup(){
+  document.getElementById('driveModalTitle').textContent='Ange mapp-ID';
+  document.getElementById('driveModalBody').innerHTML=`
+    <p>För att dela träningar och trupp behöver alla ledare peka på samma mapp i Drive.</p>
+    <p style="margin-bottom:1rem;"><b>Gör så här (en gång per enhet):</b><br>
+    1. Gå till Google Drive och öppna mappen "HHC Träningar"<br>
+    2. Kopiera mapp-ID:t ur adressfältet — den långa strängen efter <code style="font-size:11px;">folders/</code><br>
+    <span style="font-size:11px;color:var(--text-muted);">Ex: drive.google.com/drive/folders/<b>1ABC...xyz</b></span>
+    </p>
+    <div style="margin-bottom:1rem;">
+      <label style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Mapp-ID</label>
+      <input type="text" id="driveFolderIdInput" placeholder="Klistra in mapp-ID här..." style="width:100%;font-size:13px;"/>
+    </div>`;
+  document.getElementById('driveModalActions').innerHTML=`
+    <button class="btn" onclick="closeModal('driveModal')">Avbryt</button>
+    <button class="btn primary" onclick="driveSaveFolderId()">Spara</button>`;
+  openModal('driveModal');
+}
 
-  // Search 1: folders shared with me — prioritized
-  const q1=encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='${folderMime}' and trashed=false and sharedWithMe=true`);
-  const r1=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q1}&fields=files(id,name)`,{headers});
-  const d1=await r1.json();
-  console.log('[Drive] sharedWithMe folder search:', JSON.stringify(d1));
-  if(d1.files&&d1.files.length>0){driveFolderId=d1.files[0].id;return driveFolderId;}
-
-  // Search 2: folders I own
-  const q2=encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='${folderMime}' and trashed=false and 'me' in owners`);
-  const r2=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q2}&fields=files(id,name)`,{headers});
-  const d2=await r2.json();
-  console.log('[Drive] own folder search:', JSON.stringify(d2));
-  if(d2.files&&d2.files.length>0){driveFolderId=d2.files[0].id;return driveFolderId;}
-
-  // Nothing found — create own folder
-  const cr=await fetch('https://www.googleapis.com/drive/v3/files',{
-    method:'POST',
-    headers:{...headers,'Content-Type':'application/json'},
-    body:JSON.stringify({name:DRIVE_FOLDER_NAME,mimeType:folderMime})
-  });
-  const cd=await cr.json();
-  console.log('[Drive] created folder:', JSON.stringify(cd));
-  driveFolderId=cd.id;
-  return driveFolderId;
+function driveSaveFolderId(){
+  const val=document.getElementById('driveFolderIdInput').value.trim();
+  if(!val){showBanner('Ange ett giltigt mapp-ID','var(--warn-bg)','var(--warn-txt)');return;}
+  const match=val.match(/[-\w]{25,}/);
+  if(!match){showBanner('Kunde inte läsa mapp-ID:t — klistra in ID:t eller hela URL:en','var(--warn-bg)','var(--warn-txt)');return;}
+  driveFolderId=match[0];
+  localStorage.setItem('hhc-drive-folder-id',driveFolderId);
+  showBanner('Mapp-ID sparat!','var(--on-bg)','var(--on-txt)');
+  closeModal('driveModal');
+  showDriveMenu();
 }
 
 // List files in folder (by prefix)
 async function driveListFiles(prefix){
   const fid=await driveGetFolder();
+  if(!fid)return[];
   const q=encodeURIComponent(`'${fid}' in parents and name contains '${prefix}' and trashed=false`);
   const r=await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime%20desc&includeItemsFromAllDrives=true&supportsAllDrives=true`,
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime%20desc&supportsAllDrives=true&includeItemsFromAllDrives=true`,
     {headers:{Authorization:'Bearer '+driveAccessToken}});
   const d=await r.json();
-  console.log('[Drive] listFiles prefix='+prefix+' folderId='+fid+' result:', JSON.stringify(d));
   return d.files||[];
 }
 
 // Save JSON to Drive (create or update)
 async function driveSaveFile(filename,jsonData){
   const fid=await driveGetFolder();
+  if(!fid)return;
   const q=encodeURIComponent(`name='${filename}' and '${fid}' in parents and trashed=false`);
   const r=await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&includeItemsFromAllDrives=true&supportsAllDrives=true`,
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true`,
     {headers:{Authorization:'Bearer '+driveAccessToken}});
   const d=await r.json();
   const blob=new Blob([JSON.stringify(jsonData,null,2)],{type:'application/json'});
   if(d.files&&d.files.length>0){
-    // Update existing
     const fileId=d.files[0].id;
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&supportsAllDrives=true`,{
       method:'PATCH',headers:{Authorization:'Bearer '+driveAccessToken,'Content-Type':'application/json'},body:blob});
   } else {
-    // Create new — multipart
     const meta=JSON.stringify({name:filename,parents:[fid]});
     const form=new FormData();
     form.append('metadata',new Blob([meta],{type:'application/json'}));
@@ -2504,7 +2501,7 @@ async function driveSaveFile(filename,jsonData){
 
 // Load JSON from Drive by file ID
 async function driveLoadFile(fileId){
-  const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+  const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
     {headers:{Authorization:'Bearer '+driveAccessToken}});
   return await r.json();
 }
@@ -2513,7 +2510,9 @@ async function driveLoadFile(fileId){
 function showDriveMenu(){
   document.getElementById('driveModalTitle').textContent='Google Drive';
   document.getElementById('driveModalBody').innerHTML=`
-    <p style="margin-bottom:1rem;">Inloggad som <b>${esc(driveUserName||'')}</b>. Välj vad du vill göra:</p>
+    <p style="margin-bottom:1rem;">Inloggad som <b>${esc(driveUserName||'')}</b>.</p>
+    ${driveFolderId?`<p style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">Mapp-ID: <code style="font-size:11px;">${driveFolderId.slice(0,12)}...</code> <button class="btn sm" onclick="showDriveFolderSetup()" style="margin-left:4px;">Ändra</button></p>`
+    :`<p style="font-size:12px;color:var(--warn-txt);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">⚠ Inget mapp-ID inställt — <button class="btn sm" onclick="showDriveFolderSetup()">Ange mapp-ID</button></p>`}
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;">
       <button class="btn primary" style="height:40px;" onclick="driveShowSavePractice()">&#8595; Spara träning till Drive</button>
       <button class="btn" style="height:40px;" onclick="driveShowLoadPractice()">&#8593; Ladda träning från Drive</button>
