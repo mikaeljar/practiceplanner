@@ -334,25 +334,31 @@ input:focus,select:focus{border-color:var(--accent);}
         <span style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;">Träningsdatum</span>
         <input type="date" id="practiceDate" onchange="save()" style="height:28px;font-size:13px;width:145px;"/>
       </div>
-      <div id="attSummary"></div>
+
       <div class="two-col att-col">
         <div class="panel">
-          <p class="panel-title">Spelare</p>
-          <div class="scroll-list" id="attPlayerList"><div class="empty-state">Inga spelare i truppen.</div></div>
-          <div style="display:flex;gap:6px;margin-top:1rem;flex-wrap:wrap;">
-            <button class="btn sm" onclick="setAllAtt('players','yes')">&#10003; Alla med</button>
-            <button class="btn sm" onclick="setAllAtt('players','no')">&#10005; Alla borta</button>
-            <button class="btn sm" onclick="setAllAtt('players','unknown')">Nollställ</button>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;flex-wrap:wrap;gap:6px;">
+            <p class="panel-title" style="margin:0;">Spelare</p>
+            <div style="display:flex;gap:4px;">
+              <button class="btn sm" onclick="setAllAtt('players','yes')">&#10003; Alla in</button>
+              <button class="btn sm" onclick="setAllAtt('players','no')">&#10005; Alla ut</button>
+              <button class="btn sm" onclick="setAllAtt('players','unknown')">Nollst.</button>
+            </div>
           </div>
+          <div id="attSummary"></div>
+          <div class="scroll-list" id="attPlayerList"><div class="empty-state">Inga spelare i truppen.</div></div>
         </div>
         <div class="panel">
-          <p class="panel-title">Ledare</p>
-          <div class="scroll-list" id="attCoachList"><div class="empty-state">Inga ledare i truppen.</div></div>
-          <div style="display:flex;gap:6px;margin-top:1rem;flex-wrap:wrap;">
-            <button class="btn sm" onclick="setAllAtt('coaches','yes')">&#10003; Alla med</button>
-            <button class="btn sm" onclick="setAllAtt('coaches','no')">&#10005; Alla borta</button>
-            <button class="btn sm" onclick="setAllAtt('coaches','unknown')">Nollställ</button>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;flex-wrap:wrap;gap:6px;">
+            <p class="panel-title" style="margin:0;">Ledare</p>
+            <div style="display:flex;gap:4px;">
+              <button class="btn sm" onclick="setAllAtt('coaches','yes')">&#10003; Alla in</button>
+              <button class="btn sm" onclick="setAllAtt('coaches','no')">&#10005; Alla ut</button>
+              <button class="btn sm" onclick="setAllAtt('coaches','unknown')">Nollst.</button>
+            </div>
           </div>
+          <div id="attCoachSummary"></div>
+          <div class="scroll-list" id="attCoachList"><div class="empty-state">Inga ledare i truppen.</div></div>
         </div>
       </div>
     </div>
@@ -584,6 +590,28 @@ input:focus,select:focus{border-color:var(--accent);}
   </div>
 </div>
 
+<!-- Player edit sheet -->
+<div class="action-sheet-overlay" id="playerSheetOverlay">
+  <div class="action-sheet">
+    <div class="action-sheet-handle"></div>
+    <div class="action-sheet-label">Redigera spelare</div>
+    <div class="action-sheet-player" id="playerSheetName"></div>
+    <div id="playerSheetBody"></div>
+    <button class="action-sheet-cancel" onclick="closePlayerSheet()">Stäng</button>
+  </div>
+</div>
+
+<!-- Coach edit sheet -->
+<div class="action-sheet-overlay" id="coachSheetOverlay">
+  <div class="action-sheet">
+    <div class="action-sheet-handle"></div>
+    <div class="action-sheet-label">Redigera ledare</div>
+    <div class="action-sheet-player" id="coachSheetName"></div>
+    <div id="coachSheetBody"></div>
+    <button class="action-sheet-cancel" onclick="closeCoachSheet()">Stäng</button>
+  </div>
+</div>
+
 <script>
 // ── State ─────────────────────────────────────────────────────────────
 // player: { id, name, number, level, attendance, coachType(unused) }
@@ -788,7 +816,7 @@ function setCoachType(id,val){
 }
 function setAtt(type,id,val){
   const list=type==='player'?players:coaches;
-  const item=list.find(x=>x.id===id);
+  const item=list.find(x=>String(x.id)===String(id));
   if(!item)return;
   const prevAtt=item.attendance;
   item.attendance=item.attendance===val?'unknown':val;
@@ -963,11 +991,11 @@ function rosterPositionChange(sel){
 }
 function attHTML(type,id,att){
   return `<div class="att-toggle">
-    <button class="att-btn att-yes${att==='yes'?' active':''}" data-type="${type}" data-id="${id}" data-val="yes" onclick="attBtnClick(this)">In</button>
-    <button class="att-btn att-no${att==='no'?' active':''}" data-type="${type}" data-id="${id}" data-val="no" onclick="attBtnClick(this)">Out</button>
+    <button class="att-btn att-yes${att==='yes'?' active':''}" data-type="${type}" data-id="${id}" data-val="yes" onclick="attBtnClick(this)">Ja</button>
+    <button class="att-btn att-no${att==='no'?' active':''}" data-type="${type}" data-id="${id}" data-val="no" onclick="attBtnClick(this)">Nej</button>
   </div>`;
 }
-function attBtnClick(btn){setAtt(btn.dataset.type, Number(btn.dataset.id), btn.dataset.val);}
+function attBtnClick(btn){setAtt(btn.dataset.type, btn.dataset.id, btn.dataset.val);}
 
 // ── Sorteringshjälpare ────────────────────────────────────────────────
 function coachTypeOrder(t){return t==='on-ice'?0:t==='off-ice'?1:2;}
@@ -1025,29 +1053,52 @@ function renderStats(){
 function renderRoster(){
   document.getElementById('rosterCount').textContent=players.length;
   document.getElementById('coachCount').textContent=coaches.length;
+  const touch=_isTouch();
   const LEVELS=['a','b','c','goalie'];
   const POSITIONS=[{v:'',l:'—'},{v:'forward',l:'Forward'},{v:'center',l:'Center'},{v:'back',l:'Back'}];
   document.getElementById('playerList').innerHTML=!players.length?'<div class="empty-state">Inga spelare ännu.</div>':
-    sortedPlayers().map(p=>`<div class="roster-item">
-      <span class="item-num-badge">${p.number?'#'+p.number:''}</span>
-      <span class="item-name">${esc(p.name)}</span>
-      <select class="level-sel" data-id="${p.id}" style="width:70px;height:24px;font-size:11px;padding:0 4px;" onchange="rosterLevelChange(this)">
-        ${LEVELS.map(l=>`<option value="${l}"${p.level===l?' selected':''}>${levelLabel(l)}</option>`).join('')}
-      </select>
-      ${usePositions&&p.level!=='goalie'?`<select data-id="${p.id}" style="width:75px;height:24px;font-size:11px;padding:0 4px;" onchange="rosterPositionChange(this)">
-        ${POSITIONS.map(po=>`<option value="${po.v}"${(p.position||'')===(po.v)?' selected':''}>${po.l}</option>`).join('')}
-      </select>`:''}
-      <div class="item-actions"><button class="btn icon-btn danger" data-id="${p.id}" onclick="rosterRemovePlayer(this)" title="Ta bort">&#10005;</button></div>
-    </div>`).join('');
+    sortedPlayers().map(p=>{
+      if(touch){
+        return `<div class="roster-item" style="cursor:pointer;" onclick="openPlayerSheet(${p.id})">
+          <span class="item-num-badge">${p.number?'#'+p.number:''}</span>
+          <span class="item-name">${esc(p.name)}</span>
+          <span class="badge ${p.level}">${levelLabel(p.level)}</span>
+          ${usePositions&&p.level!=='goalie'?`<span class="badge pos${!p.position?' null-pos':''}">${posLabel(p.position)}</span>`:''}
+          <svg width="8" height="13" viewBox="0 0 8 13" fill="none" style="flex-shrink:0;opacity:0.35;"><path d="M1.5 1.5L6.5 6.5L1.5 11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>`;
+      } else {
+        return `<div class="roster-item">
+          <span class="item-num-badge">${p.number?'#'+p.number:''}</span>
+          <span class="item-name">${esc(p.name)}</span>
+          <select class="level-sel" data-id="${p.id}" style="width:70px;height:24px;font-size:11px;padding:0 4px;" onchange="rosterLevelChange(this)">
+            ${LEVELS.map(l=>`<option value="${l}"${p.level===l?' selected':''}>${levelLabel(l)}</option>`).join('')}
+          </select>
+          ${usePositions&&p.level!=='goalie'?`<select data-id="${p.id}" style="width:75px;height:24px;font-size:11px;padding:0 4px;" onchange="rosterPositionChange(this)">
+            ${POSITIONS.map(po=>`<option value="${po.v}"${(p.position||'')===(po.v)?' selected':''}>${po.l}</option>`).join('')}
+          </select>`:''}
+          <div class="item-actions"><button class="btn icon-btn danger" data-id="${p.id}" onclick="rosterRemovePlayer(this)" title="Ta bort">&#10005;</button></div>
+        </div>`;
+      }
+    }).join('');
   const CTYPES=['on-ice','off-ice','goalie-coach'];
   document.getElementById('coachList').innerHTML=!coaches.length?'<div class="empty-state">Inga ledare ännu.</div>':
-    sortedCoaches().map(c=>`<div class="roster-item">
-      <span class="item-name">${esc(c.name)}</span>
-      <select data-id="${c.id}" style="width:90px;height:24px;font-size:11px;padding:0 4px;" onchange="rosterCoachTypeChange(this)">
-        ${CTYPES.map(t=>`<option value="${t}"${c.coachType===t?' selected':''}>${coachTypeLabel(t)}</option>`).join('')}
-      </select>
-      <div class="item-actions"><button class="btn icon-btn danger" data-id="${c.id}" onclick="rosterRemoveCoach(this)" title="Ta bort">&#10005;</button></div>
-    </div>`).join('');
+    sortedCoaches().map(c=>{
+      if(touch){
+        return `<div class="roster-item" style="cursor:pointer;" onclick="openCoachSheet(${c.id})">
+          <span class="item-name">${esc(c.name)}</span>
+          <span class="badge coach">${coachTypeLabel(c.coachType)}</span>
+          <svg width="8" height="13" viewBox="0 0 8 13" fill="none" style="flex-shrink:0;opacity:0.35;"><path d="M1.5 1.5L6.5 6.5L1.5 11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>`;
+      } else {
+        return `<div class="roster-item">
+          <span class="item-name">${esc(c.name)}</span>
+          <select data-id="${c.id}" style="width:90px;height:24px;font-size:11px;padding:0 4px;" onchange="rosterCoachTypeChange(this)">
+            ${CTYPES.map(t=>`<option value="${t}"${c.coachType===t?' selected':''}>${coachTypeLabel(t)}</option>`).join('')}
+          </select>
+          <div class="item-actions"><button class="btn icon-btn danger" data-id="${c.id}" onclick="rosterRemoveCoach(this)" title="Ta bort">&#10005;</button></div>
+        </div>`;
+      }
+    }).join('');
 }
 function rosterLevelChange(sel){const id=Number(sel.dataset.id);setPlayerLevel(id,sel.value);}
 function rosterRemovePlayer(btn){removePlayer(Number(btn.dataset.id));}
@@ -1060,14 +1111,30 @@ function renderAttendance(){
   const pUnk=players.filter(p=>p.attendance==='unknown');
   const cIn=coaches.filter(c=>c.attendance==='yes');
   const cOut=coaches.filter(c=>c.attendance==='no');
-  document.getElementById('attSummary').innerHTML=`<div class="att-summary">
-    <span><span class="att-dot on"></span><b>${pIn.length}</b> spelare med</span>
-    <span><span class="att-dot off"></span><b>${pOut.length}</b> frånvarande</span>
-    <span><span class="att-dot unk"></span><b>${pUnk.length}</b> okänd</span>
-    <span style="border-left:1px solid var(--border);padding-left:14px;margin-left:2px;">
-      <span class="att-dot on" style="background:var(--coach-txt)"></span><b>${cIn.length}</b> ledare med</span>
-    <span><span class="att-dot off"></span><b>${cOut.length}</b> frånvarande</span>
-  </div>`;
+  const cUnk=coaches.filter(c=>c.attendance==='unknown');
+
+  // Player summary
+  document.getElementById('attSummary').innerHTML=
+    `<div style="font-family:'Helvetica Neue',sans-serif;font-size:12px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap;margin-bottom:0.6rem;">
+      <span><span class="att-dot on"></span><b style="color:var(--text);">${pIn.length}</b> Kommer</span>
+      <span><span class="att-dot off"></span><b style="color:var(--text);">${pOut.length}</b> Kommer inte</span>
+      <span><span class="att-dot unk"></span><b style="color:var(--text);">${pUnk.length}</b> Ej svarat</span>
+    </div>`;
+
+  // Coach summary — per type for those coming, then combined for no/unknown
+  const coachSummaryParts=[];
+  const types=['on-ice','off-ice','goalie-coach'];
+  types.forEach(t=>{
+    const n=cIn.filter(c=>c.coachType===t).length;
+    if(n>0)coachSummaryParts.push(`<span><span class="att-dot on" style="background:var(--coach-txt)"></span><b style="color:var(--text);">${n}</b> ${coachTypeLabel(t)}</span>`);
+  });
+  if(cOut.length)coachSummaryParts.push(`<span><span class="att-dot off"></span><b style="color:var(--text);">${cOut.length}</b> Kommer inte</span>`);
+  if(cUnk.length)coachSummaryParts.push(`<span><span class="att-dot unk"></span><b style="color:var(--text);">${cUnk.length}</b> Ej svarat</span>`);
+  const coachSummaryEl=document.getElementById('attCoachSummary');
+  if(coachSummaryEl)coachSummaryEl.innerHTML=coachSummaryParts.length
+    ?`<div style="font-family:'Helvetica Neue',sans-serif;font-size:12px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap;margin-bottom:0.6rem;">${coachSummaryParts.join('')}</div>`
+    :'';
+
   document.getElementById('attPlayerList').innerHTML=!players.length?'<div class="empty-state">Inga spelare i truppen.</div>':
     sortedPlayersAtt().map(p=>`<div class="roster-item${p.attendance==='no'?' absent':''}">
       <span class="item-num-badge">${p.number?'#'+p.number:''}</span>
@@ -1372,6 +1439,88 @@ function openActionSheet(pid,fromGi,fromZone){
 function closeActionSheet(){
   document.getElementById('actionSheetOverlay').classList.remove('open');
 }
+
+// ── Player edit sheet ─────────────────────────────────────────────────
+function openPlayerSheet(id){
+  const p=players.find(x=>x.id===id);if(!p)return;
+  document.getElementById('playerSheetName').textContent=p.name+(p.number?' (#'+p.number+')':'');
+  const LEVELS=['a','b','c','goalie'];
+  const POSITIONS=[{v:'',l:'—'},{v:'forward',l:'Forward'},{v:'center',l:'Center'},{v:'back',l:'Back'}];
+  let html=`<div style="margin-bottom:12px;">
+    <div style="font-size:11px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Nivå</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      ${LEVELS.map(l=>`<button onclick="playerSheetSetLevel(${id},'${l}')" style="padding:6px 14px;border-radius:var(--radius);border:1px solid var(--border-strong);background:${p.level===l?'var(--accent)':'var(--surface2)'};color:${p.level===l?'#fff':'var(--text)'};font-size:13px;cursor:pointer;font-family:'Helvetica Neue',sans-serif;">${levelLabel(l)}</button>`).join('')}
+    </div>
+  </div>`;
+  if(usePositions&&p.level!=='goalie'){
+    html+=`<div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Position</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${POSITIONS.map(po=>`<button onclick="playerSheetSetPos(${id},'${po.v}')" style="padding:6px 14px;border-radius:var(--radius);border:1px solid var(--border-strong);background:${(p.position||'')===(po.v)?'var(--accent)':'var(--surface2)'};color:${(p.position||'')===(po.v)?'#fff':'var(--text)'};font-size:13px;cursor:pointer;font-family:'Helvetica Neue',sans-serif;">${po.l}</button>`).join('')}
+      </div>
+    </div>`;
+  }
+  html+=`<div style="margin-bottom:14px;">
+    <div style="font-size:11px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Tröjnummer</div>
+    <input type="number" min="1" max="99" value="${p.number||''}" placeholder="—"
+      style="width:90px;height:36px;font-size:15px;padding:0 10px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface2);color:var(--text);"
+      oninput="playerSheetSetNumber(${id},this.value)"/>
+  </div>
+  <button onclick="playerSheetDelete(${id})" style="width:100%;padding:10px;border-radius:var(--radius);border:1px solid var(--danger-txt);background:transparent;color:var(--danger-txt);font-size:13px;cursor:pointer;font-family:'Helvetica Neue',sans-serif;">Ta bort spelare</button>`;
+  document.getElementById('playerSheetBody').innerHTML=html;
+  document.getElementById('playerSheetOverlay').classList.add('open');
+}
+function closePlayerSheet(){
+  document.getElementById('playerSheetOverlay').classList.remove('open');
+}
+function playerSheetSetLevel(id,val){
+  const p=players.find(x=>x.id===id);if(p){p.level=val;save();}
+  openPlayerSheet(id);renderRoster();renderStats();
+}
+function playerSheetSetPos(id,val){
+  const p=players.find(x=>x.id===id);if(p){p.position=val||null;save();}
+  openPlayerSheet(id);renderRoster();
+}
+function playerSheetSetNumber(id,val){
+  const p=players.find(x=>x.id===id);if(p){p.number=val.trim();save();renderRoster();}
+}
+function playerSheetDelete(id){
+  closePlayerSheet();
+  if(!confirm('Ta bort denna spelare?'))return;
+  players=players.filter(p=>p.id!==id);save();renderAll();
+}
+document.getElementById('playerSheetOverlay').addEventListener('click',function(e){if(e.target===this)closePlayerSheet();});
+
+// ── Coach edit sheet ──────────────────────────────────────────────────
+function openCoachSheet(id){
+  const c=coaches.find(x=>x.id===id);if(!c)return;
+  document.getElementById('coachSheetName').textContent=c.name;
+  const CTYPES=['on-ice','off-ice','goalie-coach'];
+  let html=`<div style="margin-bottom:14px;">
+    <div style="font-size:11px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Roll</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      ${CTYPES.map(t=>`<button onclick="coachSheetSetType(${id},'${t}')" style="padding:6px 12px;border-radius:var(--radius);border:1px solid var(--border-strong);background:${c.coachType===t?'var(--accent)':'var(--surface2)'};color:${c.coachType===t?'#fff':'var(--text)'};font-size:13px;cursor:pointer;font-family:'Helvetica Neue',sans-serif;">${coachTypeLabel(t)}</button>`).join('')}
+    </div>
+  </div>
+  <button onclick="coachSheetDelete(${id})" style="width:100%;padding:10px;border-radius:var(--radius);border:1px solid var(--danger-txt);background:transparent;color:var(--danger-txt);font-size:13px;cursor:pointer;font-family:'Helvetica Neue',sans-serif;">Ta bort ledare</button>`;
+  document.getElementById('coachSheetBody').innerHTML=html;
+  document.getElementById('coachSheetOverlay').classList.add('open');
+}
+function closeCoachSheet(){
+  document.getElementById('coachSheetOverlay').classList.remove('open');
+}
+function coachSheetSetType(id,val){
+  const c=coaches.find(x=>x.id===id);if(c){c.coachType=val;save();}
+  openCoachSheet(id);renderRoster();
+}
+function coachSheetDelete(id){
+  closeCoachSheet();
+  if(!confirm('Ta bort denna ledare?'))return;
+  coaches=coaches.filter(c=>c.id!==id);
+  stations.forEach(s=>{s.coaches=s.coaches.filter(cid=>String(cid)!==String(id));});
+  save();renderAll();
+}
+document.getElementById('coachSheetOverlay').addEventListener('click',function(e){if(e.target===this)closeCoachSheet();});
 
 function actionSheetMove(pid,toGi,fromZone,fromGi){
   closeActionSheet();
