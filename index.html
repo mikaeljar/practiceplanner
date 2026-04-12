@@ -334,9 +334,9 @@ input:focus,select:focus{border-color:var(--accent);}
   <div id="traningBand" style="display:none;">
     <div class="traning-band">
       <div class="traning-band-left">
-        <button class="btn sm" onclick="loadPracticeFile()" title="Ladda en sparad träning">&#8593; Ladda träning</button>
+        <button class="btn sm" onclick="loadTraningInit()" title="Ladda en sparad träning">&#8593; Ladda träning</button>
         <input type="file" id="loadPracticeInput" accept=".json" style="display:none" onchange="loadPracticeFromFile(event)"/>
-        <button class="btn sm primary" onclick="savePracticeFile()" title="Spara träningen som fil">&#8595; Spara träning</button>
+        <button class="btn sm primary" onclick="saveTraningInit()" title="Spara träningen">&#8595; Spara träning</button>
         <button class="btn sm" onclick="nyTraning()" title="Nollställ träningen och börja om">&#8635; Ny träning</button>
       </div>
       <div class="traning-band-right">
@@ -527,8 +527,8 @@ input:focus,select:focus{border-color:var(--accent);}
         </div>
         <div class="section-sep"></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn sm" onclick="exportRoster()">&#8595; Exportera</button>
-          <button class="btn sm" onclick="document.getElementById('importInput').click()">&#8593; Importera</button>
+          <button class="btn sm" onclick="saveRosterInit()">&#8595; Spara trupp</button>
+          <button class="btn sm" onclick="loadRosterInit()">&#8593; Ladda trupp</button>
           <input type="file" id="importInput" accept=".json" style="display:none" onchange="importRoster(event)"/>
           <button class="btn sm danger" onclick="clearRoster()">&#10005; Rensa allt</button>
         </div>
@@ -584,14 +584,64 @@ input:focus,select:focus{border-color:var(--accent);}
 </div>
 
 <!-- Export modal -->
-<div class="modal-overlay" id="exportModal">
-  <div class="modal">
-    <h2>Exportera trupp</h2>
-    <p>Ladda ner filen och skicka till en annan ledare. De kan importera den via Importera-knappen i Trupp.</p>
-    <textarea id="exportPreview" readonly></textarea>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeModal('exportModal')">Avbryt</button>
-      <button class="btn primary" onclick="downloadExport()">&#8595; Ladda ner</button>
+<!-- Spara träning modal -->
+<div class="modal-overlay" id="saveTraningModal">
+  <div class="modal" style="max-width:420px;">
+    <h2>Spara träning</h2>
+    <p>Ge träningen ett namn så du enkelt kan känna igen den senare.</p>
+    <div style="margin-bottom:1rem;">
+      <label style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Namn</label>
+      <input type="text" id="saveTraningNameInput" placeholder="T.ex. Träning v16 tisdag" style="width:100%;"/>
+    </div>
+    <div class="modal-actions" style="flex-direction:column;gap:8px;">
+      <button class="btn primary" style="width:100%;height:40px;" onclick="saveTraningLocal()">&#128190; Spara lokalt</button>
+      <button class="btn" style="width:100%;height:40px;" id="saveTraningDriveBtn" onclick="saveTraningDrive()">&#9729; Spara till Drive</button>
+      <button class="btn" style="width:100%;height:40px;" onclick="saveTraningDevice()">&#8595; Ladda ner till enhet</button>
+      <button class="btn" onclick="closeModal('saveTraningModal')">Avbryt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ladda träning modal -->
+<div class="modal-overlay" id="loadTraningModal">
+  <div class="modal" style="max-width:480px;">
+    <h2>Ladda träning</h2>
+    <p>Välj en träning att ladda.</p>
+    <div id="traningFileList"><div class="drive-empty">Inga sparade träningar hittades.</div></div>
+    <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
+      <button class="btn" onclick="document.getElementById('loadPracticeInput').click()">&#128193; Välj fil från enhet</button>
+      <button class="btn" onclick="closeModal('loadTraningModal')">Stäng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Spara trupp modal -->
+<div class="modal-overlay" id="saveRosterModal">
+  <div class="modal" style="max-width:420px;">
+    <h2>Spara trupp</h2>
+    <p>Ge truppen ett namn så du enkelt kan känna igen den senare.</p>
+    <div style="margin-bottom:1rem;">
+      <label style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Namn</label>
+      <input type="text" id="saveRosterNameInput" placeholder="T.ex. HHC 2026" style="width:100%;"/>
+    </div>
+    <div class="modal-actions" style="flex-direction:column;gap:8px;">
+      <button class="btn primary" style="width:100%;height:40px;" onclick="saveRosterLocal()">&#128190; Spara lokalt</button>
+      <button class="btn" style="width:100%;height:40px;" id="saveRosterDriveBtn" onclick="saveRosterDrive()">&#9729; Spara till Drive</button>
+      <button class="btn" style="width:100%;height:40px;" onclick="saveRosterDevice()">&#8595; Ladda ner till enhet</button>
+      <button class="btn" onclick="closeModal('saveRosterModal')">Avbryt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ladda trupp modal -->
+<div class="modal-overlay" id="loadRosterModal">
+  <div class="modal" style="max-width:480px;">
+    <h2>Ladda trupp</h2>
+    <p>Välj en trupp att ladda.</p>
+    <div id="rosterFileList"><div class="drive-empty">Inga sparade truppar hittades.</div></div>
+    <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
+      <button class="btn" onclick="document.getElementById('importInput').click()">&#128193; Välj fil från enhet</button>
+      <button class="btn" onclick="closeModal('loadRosterModal')">Stäng</button>
     </div>
   </div>
 </div>
@@ -2061,9 +2111,7 @@ function nyTraning(){
 }
 function nyTraningSpara(){
   closeModal('nyTraningModal');
-  savePracticeFile(); // downloads the file
-  // Reset after a short delay so the download triggers first
-  setTimeout(()=>nyTraningRensa(),300);
+  saveTraningInit();
 }
 function nyTraningRensa(){
   closeModal('nyTraningModal');
@@ -2221,6 +2269,313 @@ function loadPracticeFromFile(evt){
     }catch(ex){console.error(ex);alert('Kunde inte läsa filen: '+ex.message);}
   };
   reader.readAsText(file);evt.target.value='';
+}
+
+// ── Spara & ladda träning ─────────────────────────────────────────────
+const TRANING_STORAGE_KEY='hhc-traning-list'; // [{name, date, data}]
+
+function getTraningData(){
+  const practiceDate=document.getElementById('practiceDate')?.value||new Date().toISOString().slice(0,10);
+  return{
+    version:5, savedAt:new Date().toISOString(), practiceDate, numStations, usePositions,
+    stations:stations.map(({label,drill,coaches:sc,fixed})=>({label,drill,fixed,
+      coachNames:sc.map(id=>coaches.find(c=>String(c.id)===String(id))?.name||null).filter(Boolean)})),
+    players:players.map(({name,number,level,attendance,position})=>({name,number,level,attendance,position:position||null})),
+    coaches:coaches.map(({name,coachType,attendance})=>({name,coachType,attendance})),
+    groups:groups.map(g=>({colour:g.colour,colour2:g.colour2,fullColour:g.fullColour,
+      players:g.players.map(p=>({name:p.name,number:p.number||'',level:p.level,jerseyColour:p.jerseyColour}))})),
+    goaliesInGroup:goaliesInGroup.map(id=>{const p=players.find(pl=>pl.id===id);return p?p.name:null;}).filter(Boolean),
+    poolPlayers:poolPlayers.map(p=>p.name),
+    practiceImageData:practiceImageData||null
+  };
+}
+
+function saveTraningInit(){
+  const date=document.getElementById('practiceDate')?.value||new Date().toISOString().slice(0,10);
+  document.getElementById('saveTraningNameInput').value=date;
+  const driveBtn=document.getElementById('saveTraningDriveBtn');
+  if(driveBtn)driveBtn.disabled=!driveAccessToken;
+  openModal('saveTraningModal');
+  setTimeout(()=>{const inp=document.getElementById('saveTraningNameInput');if(inp)inp.select();},100);
+}
+
+function saveTraningLocal(){
+  const name=document.getElementById('saveTraningNameInput').value.trim();
+  if(!name){showBanner('Ange ett namn','var(--warn-bg)','var(--warn-txt)');return;}
+  const list=JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
+  list.unshift({name,date:new Date().toISOString(),data:getTraningData()});
+  if(list.length>30)list.length=30;
+  localStorage.setItem(TRANING_STORAGE_KEY,JSON.stringify(list));
+  closeModal('saveTraningModal');
+  showBanner('Träning "'+name+'" sparad lokalt','var(--on-bg)','var(--on-txt)');
+}
+
+async function saveTraningDrive(){
+  if(!driveAccessToken){showBanner('Logga in på Drive först','var(--warn-bg)','var(--warn-txt)');return;}
+  const name=document.getElementById('saveTraningNameInput').value.trim();
+  if(!name){showBanner('Ange ett namn','var(--warn-bg)','var(--warn-txt)');return;}
+  const safe=name.replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'').trim()||'traning';
+  const ts=new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
+  const filename=`traning-${safe}-${ts}.json`;
+  const btn=document.getElementById('saveTraningDriveBtn');
+  if(btn){btn.disabled=true;btn.textContent='Sparar...';}
+  try{
+    await driveSaveFile(filename,{name,...getTraningData()});
+    closeModal('saveTraningModal');
+    showBanner('Träning "'+name+'" sparad till Drive','var(--on-bg)','var(--on-txt)');
+  }catch(e){
+    showBanner('Drive-fel: '+e.message,'var(--danger-bg)','var(--danger-txt)');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='⛅ Spara till Drive';}
+  }
+}
+
+function saveTraningDevice(){
+  const name=document.getElementById('saveTraningNameInput').value.trim()||'traning';
+  const safe=name.replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'-').trim();
+  const filename=safe+'.json';
+  const blob=new Blob([JSON.stringify(getTraningData(),null,2)],{type:'application/json'});
+  fallbackDownloadJSON(blob,filename);
+  closeModal('saveTraningModal');
+  showBanner('Träning nedladdad: '+filename,'var(--on-bg)','var(--on-txt)');
+}
+
+async function loadTraningInit(){
+  const list=JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
+  let html='';
+  if(list.length){
+    html+=`<div class="drive-section-title" style="margin-top:0;">Lokalt sparade</div><div class="drive-file-list">`;
+    html+=list.map((item,i)=>{
+      const d=new Date(item.date);
+      const ds=d.toLocaleDateString('sv-SE',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
+      return `<div class="drive-file-item">
+        <span class="source-badge source-local">Lokalt</span>
+        <span class="drive-file-name" style="cursor:pointer;" onclick="applyTraning(${i})">${esc(item.name)}</span>
+        <span class="drive-file-date">${ds}</span>
+        <button class="btn sm" title="Ladda ner till enhet" onclick="downloadTraningItem(${i})" style="flex-shrink:0;">&#8595;</button>
+      </div>`;
+    }).join('');
+    html+=`</div>`;
+  }
+  if(driveAccessToken&&driveFolderId){
+    html+=`<div class="drive-section-title" style="margin-top:12px;">Drive</div><div id="traningDriveList"><div class="drive-empty">Hämtar...</div></div>`;
+  } else if(!driveAccessToken){
+    html+=`<p style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-top:10px;">Logga in på Drive för att se Drive-sparade träningar.</p>`;
+  }
+  if(!list.length&&!driveAccessToken)html='<div class="drive-empty">Inga sparade träningar hittades.</div>';
+  document.getElementById('traningFileList').innerHTML=html||'<div class="drive-empty">Inga sparade träningar hittades.</div>';
+  openModal('loadTraningModal');
+  if(driveAccessToken&&driveFolderId){
+    try{
+      const files=await driveListFiles('traning-');
+      const el=document.getElementById('traningDriveList');if(!el)return;
+      if(!files.length){el.innerHTML='<div class="drive-empty">Inga Drive-träningar hittades.</div>';return;}
+      el.innerHTML=`<div class="drive-file-list">`+files.map(f=>{
+        const d=new Date(f.modifiedTime);
+        const ds=d.toLocaleDateString('sv-SE',{day:'numeric',month:'short',year:'numeric'});
+        const displayName=f.name.replace(/^traning-/,'').replace(/\.json$/,'').replace(/-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$/,'').replace(/-/g,' ')||f.name;
+        return `<div class="drive-file-item">
+          <span class="source-badge source-drive">Drive</span>
+          <span class="drive-file-name" style="cursor:pointer;" onclick="applyTraningDrive('${f.id}')">${esc(displayName)}</span>
+          <span class="drive-file-date">${ds}</span>
+        </div>`;
+      }).join('')+`</div>`;
+    }catch(e){
+      const el=document.getElementById('traningDriveList');
+      if(el)el.innerHTML='<div class="drive-empty">Kunde inte hämta från Drive.</div>';
+    }
+  }
+}
+
+function applyTraning(index){
+  const list=JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
+  const item=list[index];if(!item)return;
+  loadPracticeData(item.data,item.name);
+  closeModal('loadTraningModal');
+}
+
+function downloadTraningItem(index){
+  const list=JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
+  const item=list[index];if(!item)return;
+  const safe=(item.name||'traning').replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'-');
+  const blob=new Blob([JSON.stringify(item.data,null,2)],{type:'application/json'});
+  fallbackDownloadJSON(blob,safe+'.json');
+}
+
+async function applyTraningDrive(fileId){
+  try{
+    const d=await driveLoadFile(fileId);
+    loadPracticeData(d,d.name||'Drive-träning');
+    closeModal('loadTraningModal');
+  }catch(e){showBanner('Fel: '+e.message,'var(--danger-bg)','var(--danger-txt)');}
+}
+
+function loadPracticeData(d,name){
+  if(!d.version||d.version<5){showBanner('Felaktigt filformat','var(--warn-bg)','var(--warn-txt)');return;}
+  if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','goalie'].includes(p.level))
+    .map(p=>{const ig=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:ig?'b':p.level,attendance:p.attendance||'unknown',position:ig?'goalie':(p.position||null)};});
+  if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
+  if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
+  if(d.numStations){numStations=d.numStations;stations=makeStations();}
+  if(d.stations){
+    const coachIdByName=n=>coaches.find(c=>c.name===n)?.id||null;
+    d.stations.forEach((ds,i)=>{if(!stations[i])return;stations[i].drill=ds.drill||'';
+      if(ds.coachNames)stations[i].coaches=ds.coachNames.map(n=>coachIdByName(n)).filter(Boolean).map(String);
+    });
+  }
+  if(d.practiceDate){try{document.getElementById('practiceDate').value=d.practiceDate;}catch(e){}}
+  if(d.groups&&d.groups.length){
+    groups=d.groups.map(sg=>({colour:sg.colour,colour2:sg.colour2,fullColour:sg.fullColour,
+      players:sg.players.map(sp=>{const p=players.find(pl=>pl.name===sp.name)||{id:uid(),name:sp.name,number:sp.number||'',level:sp.level||'b',attendance:'yes'};p.jerseyColour=sp.jerseyColour;return p;})}));
+    goaliesInGroup=(d.goaliesInGroup||[]).map(n=>players.find(p=>p.name===n)?.id).filter(Boolean);
+    poolPlayers=(d.poolPlayers||[]).map(n=>players.find(p=>p.name===n)).filter(Boolean);
+  }
+  if(d.practiceImageData){practiceImageData=d.practiceImageData;try{document.getElementById('practiceImageEl').src=practiceImageData;document.getElementById('practiceImagePreview').style.display='block';}catch(e){}}
+  else clearPracticeImage();
+  save();renderAll();
+  if(groups.length){document.getElementById('textOutputBtn').disabled=false;document.getElementById('cardOutputBtn').disabled=false;const ab=document.getElementById('addGroupBtn');if(ab)ab.style.display='';}
+  renderStationer();
+  showBanner('Träning "'+name+'" laddad','var(--on-bg)','var(--on-txt)');
+}
+
+// ── Spara & ladda trupp ────────────────────────────────────────────────
+const ROSTER_STORAGE_KEY='hhc-roster-list'; // [{name, date, data}]
+
+function getRosterData(){
+  return{
+    version:4, exportedAt:new Date().toISOString(),
+    players:players.map(({name,number,level,attendance,position})=>({name,number,level,attendance,position:position||null})),
+    coaches:coaches.map(({name,coachType,attendance})=>({name,coachType,attendance}))
+  };
+}
+
+function saveRosterInit(){
+  document.getElementById('saveRosterNameInput').value=new Date().toLocaleDateString('sv-SE');
+  const driveBtn=document.getElementById('saveRosterDriveBtn');
+  if(driveBtn)driveBtn.disabled=!driveAccessToken;
+  openModal('saveRosterModal');
+  setTimeout(()=>{const inp=document.getElementById('saveRosterNameInput');if(inp)inp.select();},100);
+}
+
+function saveRosterLocal(){
+  const name=document.getElementById('saveRosterNameInput').value.trim();
+  if(!name){showBanner('Ange ett namn','var(--warn-bg)','var(--warn-txt)');return;}
+  const list=JSON.parse(localStorage.getItem(ROSTER_STORAGE_KEY)||'[]');
+  list.unshift({name,date:new Date().toISOString(),data:getRosterData()});
+  if(list.length>20)list.length=20;
+  localStorage.setItem(ROSTER_STORAGE_KEY,JSON.stringify(list));
+  closeModal('saveRosterModal');
+  showBanner('Trupp "'+name+'" sparad lokalt','var(--on-bg)','var(--on-txt)');
+}
+
+async function saveRosterDrive(){
+  if(!driveAccessToken){showBanner('Logga in på Drive först','var(--warn-bg)','var(--warn-txt)');return;}
+  const name=document.getElementById('saveRosterNameInput').value.trim();
+  if(!name){showBanner('Ange ett namn','var(--warn-bg)','var(--warn-txt)');return;}
+  const safe=name.replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'').trim()||'trupp';
+  const ts=new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
+  const filename=`trupp-${safe}-${ts}.json`;
+  const btn=document.getElementById('saveRosterDriveBtn');
+  if(btn){btn.disabled=true;btn.textContent='Sparar...';}
+  try{
+    await driveSaveFile(filename,{name,...getRosterData()});
+    closeModal('saveRosterModal');
+    showBanner('Trupp "'+name+'" sparad till Drive','var(--on-bg)','var(--on-txt)');
+  }catch(e){
+    showBanner('Drive-fel: '+e.message,'var(--danger-bg)','var(--danger-txt)');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='⛅ Spara till Drive';}
+  }
+}
+
+function saveRosterDevice(){
+  const name=document.getElementById('saveRosterNameInput').value.trim()||'trupp';
+  const safe=name.replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'-').trim();
+  const blob=new Blob([JSON.stringify(getRosterData(),null,2)],{type:'application/json'});
+  fallbackDownloadJSON(blob,safe+'.json');
+  closeModal('saveRosterModal');
+  showBanner('Trupp nedladdad: '+safe+'.json','var(--on-bg)','var(--on-txt)');
+}
+
+async function loadRosterInit(){
+  const list=JSON.parse(localStorage.getItem(ROSTER_STORAGE_KEY)||'[]');
+  let html='';
+  if(list.length){
+    html+=`<div class="drive-section-title" style="margin-top:0;">Lokalt sparade</div><div class="drive-file-list">`;
+    html+=list.map((item,i)=>{
+      const d=new Date(item.date);
+      const ds=d.toLocaleDateString('sv-SE',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
+      return `<div class="drive-file-item">
+        <span class="source-badge source-local">Lokalt</span>
+        <span class="drive-file-name" style="cursor:pointer;" onclick="applyRoster(${i})">${esc(item.name)}</span>
+        <span class="drive-file-date">${ds}</span>
+        <button class="btn sm" title="Ladda ner till enhet" onclick="downloadRosterItem(${i})" style="flex-shrink:0;">&#8595;</button>
+      </div>`;
+    }).join('');
+    html+=`</div>`;
+  }
+  if(driveAccessToken&&driveFolderId){
+    html+=`<div class="drive-section-title" style="margin-top:12px;">Drive</div><div id="rosterDriveList"><div class="drive-empty">Hämtar...</div></div>`;
+  } else if(!driveAccessToken){
+    html+=`<p style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-top:10px;">Logga in på Drive för att se Drive-sparade truppar.</p>`;
+  }
+  if(!list.length&&!driveAccessToken)html='<div class="drive-empty">Inga sparade truppar hittades.</div>';
+  document.getElementById('rosterFileList').innerHTML=html||'<div class="drive-empty">Inga sparade truppar hittades.</div>';
+  openModal('loadRosterModal');
+  if(driveAccessToken&&driveFolderId){
+    try{
+      const files=await driveListFiles('trupp-');
+      const el=document.getElementById('rosterDriveList');if(!el)return;
+      if(!files.length){el.innerHTML='<div class="drive-empty">Inga Drive-truppar hittades.</div>';return;}
+      el.innerHTML=`<div class="drive-file-list">`+files.map(f=>{
+        const d=new Date(f.modifiedTime);
+        const ds=d.toLocaleDateString('sv-SE',{day:'numeric',month:'short',year:'numeric'});
+        const displayName=f.name.replace(/^trupp-/,'').replace(/\.json$/,'').replace(/-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$/,'').replace(/-/g,' ')||f.name;
+        return `<div class="drive-file-item">
+          <span class="source-badge source-drive">Drive</span>
+          <span class="drive-file-name" style="cursor:pointer;" onclick="applyRosterDrive('${f.id}')">${esc(displayName)}</span>
+          <span class="drive-file-date">${ds}</span>
+        </div>`;
+      }).join('')+`</div>`;
+    }catch(e){
+      const el=document.getElementById('rosterDriveList');
+      if(el)el.innerHTML='<div class="drive-empty">Kunde inte hämta från Drive.</div>';
+    }
+  }
+}
+
+function applyRoster(index){
+  const list=JSON.parse(localStorage.getItem(ROSTER_STORAGE_KEY)||'[]');
+  const item=list[index];if(!item)return;
+  loadRosterData(item.data,item.name);
+  closeModal('loadRosterModal');
+}
+
+function downloadRosterItem(index){
+  const list=JSON.parse(localStorage.getItem(ROSTER_STORAGE_KEY)||'[]');
+  const item=list[index];if(!item)return;
+  const safe=(item.name||'trupp').replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'-');
+  const blob=new Blob([JSON.stringify(item.data,null,2)],{type:'application/json'});
+  fallbackDownloadJSON(blob,safe+'.json');
+}
+
+async function applyRosterDrive(fileId){
+  try{
+    const d=await driveLoadFile(fileId);
+    loadRosterData(d,d.name||'Drive-trupp');
+    closeModal('loadRosterModal');
+  }catch(e){showBanner('Fel: '+e.message,'var(--danger-bg)','var(--danger-txt)');}
+}
+
+function loadRosterData(d,name){
+  const newP=(d.players||[]).filter(p=>p.name&&['a','b','c','goalie'].includes(p.level))
+    .map(p=>{const ig=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:ig?'b':p.level,attendance:p.attendance||'unknown',position:ig?'goalie':(p.position||null)};});
+  const newC=(d.coaches||[]).filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
+  if(!newP.length&&!newC.length){showBanner('Inga giltiga data hittades','var(--warn-bg)','var(--warn-txt)');return;}
+  const replace=players.length?confirm(`Hittade ${newP.length} spelare och ${newC.length} ledare.\n\nOK = ersätt truppen\nAvbryt = lägg till i befintlig trupp`):true;
+  if(replace){players=newP;coaches=newC;}else{players=[...players,...newP];coaches=[...coaches,...newC];}
+  save();renderAll();clearGroups();
+  showBanner('Trupp "'+name+'" laddad: '+newP.length+' spelare, '+newC.length+' ledare','var(--on-bg)','var(--on-txt)');
 }
 
 // ── Upplägg: spara & ladda ────────────────────────────────────────────
@@ -2781,14 +3136,10 @@ function showDriveMenu(){
   document.getElementById('driveModalTitle').textContent='Google Drive';
   document.getElementById('driveModalBody').innerHTML=`
     <p style="margin-bottom:1rem;">Inloggad som <b>${esc(driveUserName||'')}</b>.</p>
-    ${driveFolderId?`<p style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">Mapp-ID: <code style="font-size:11px;">${driveFolderId.slice(0,12)}...</code> <button class="btn sm" onclick="showDriveFolderSetup()" style="margin-left:4px;">Ändra</button></p>`
-    :`<p style="font-size:12px;color:var(--warn-txt);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">⚠ Inget mapp-ID inställt — <button class="btn sm" onclick="showDriveFolderSetup()">Ange mapp-ID</button></p>`}
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;">
-      <button class="btn primary" style="height:40px;" onclick="driveShowSavePractice()">&#8595; Spara träning till Drive</button>
-      <button class="btn" style="height:40px;" onclick="driveShowLoadPractice()">&#8593; Ladda träning från Drive</button>
-      <button class="btn" style="height:40px;margin-top:4px;border-top:1px solid var(--border);padding-top:12px;" onclick="driveShowSaveRoster()">&#8595; Spara trupp till Drive</button>
-      <button class="btn" style="height:40px;" onclick="driveShowLoadRoster()">&#8593; Ladda trupp från Drive</button>
-    </div>`;
+    ${driveFolderId
+      ?`<p style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">Mapp-ID: <code style="font-size:11px;">${driveFolderId.slice(0,12)}...</code> <button class="btn sm" onclick="showDriveFolderSetup()" style="margin-left:4px;">Ändra</button></p>`
+      :`<p style="font-size:12px;color:var(--warn-txt);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">⚠ Inget mapp-ID inställt — <button class="btn sm" onclick="showDriveFolderSetup()">Ange mapp-ID</button></p>`}
+    <p style="font-size:13px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;">Spara och ladda träningar och truppar via knapparna i appen.</p>`;
   document.getElementById('driveModalActions').innerHTML=
     `<button class="btn danger" onclick="driveSignOut()">Logga ut</button>
      <button class="btn" onclick="closeModal('driveModal')">Stäng</button>`;
@@ -2954,6 +3305,10 @@ async function driveLoadRoster(fileId,filename){
 document.getElementById('driveModal').addEventListener('click',function(e){if(e.target===this)closeModal('driveModal');});
 document.getElementById('saveUpplaggModal').addEventListener('click',function(e){if(e.target===this)closeModal('saveUpplaggModal');});
 document.getElementById('loadUpplaggModal').addEventListener('click',function(e){if(e.target===this)closeModal('loadUpplaggModal');});
+document.getElementById('saveTraningModal').addEventListener('click',function(e){if(e.target===this)closeModal('saveTraningModal');});
+document.getElementById('loadTraningModal').addEventListener('click',function(e){if(e.target===this)closeModal('loadTraningModal');});
+document.getElementById('saveRosterModal').addEventListener('click',function(e){if(e.target===this)closeModal('saveRosterModal');});
+document.getElementById('loadRosterModal').addEventListener('click',function(e){if(e.target===this)closeModal('loadRosterModal');});
 
 // ── PWA Service Worker (offline-stöd) ────────────────────────────────
 if('serviceWorker' in navigator){
