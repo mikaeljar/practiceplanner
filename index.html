@@ -2392,6 +2392,29 @@ function driveButtonClick(){
 }
 
 function driveSignIn(){
+  // Show security info first time
+  if(!localStorage.getItem('hhc-drive-consent')){
+    document.getElementById('driveModalTitle').textContent='Innan du loggar in';
+    document.getElementById('driveModalBody').innerHTML=`
+      <div style="background:var(--accent-light);border-radius:var(--radius);padding:12px 14px;margin-bottom:1rem;font-family:'Helvetica Neue',sans-serif;font-size:13px;color:var(--accent-text);line-height:1.6;">
+        Den här appen använder Google Drive för att spara och dela träningar mellan ledare. Vid inloggning ges appen teknisk tillgång till ditt Google Drive — appen läser och skriver dock bara till den mapp vars ID du anger. Ingen data skickas till någon server som kan ta del av data.
+      </div>`;
+    document.getElementById('driveModalActions').innerHTML=`
+      <button class="btn" onclick="closeModal('driveModal')">Avbryt</button>
+      <button class="btn primary" onclick="driveConsentAndSignIn()">Jag förstår — logga in</button>`;
+    openModal('driveModal');
+    return;
+  }
+  driveDoSignIn();
+}
+
+function driveConsentAndSignIn(){
+  localStorage.setItem('hhc-drive-consent','1');
+  closeModal('driveModal');
+  driveDoSignIn();
+}
+
+function driveDoSignIn(){
   const client=google.accounts.oauth2.initTokenClient({
     client_id:DRIVE_CLIENT_ID,
     scope:DRIVE_SCOPES+' https://www.googleapis.com/auth/userinfo.profile',
@@ -2435,12 +2458,7 @@ async function driveGetFolder(){
 function showDriveFolderSetup(){
   document.getElementById('driveModalTitle').textContent='Ange mapp-ID';
   document.getElementById('driveModalBody').innerHTML=`
-    <p>För att dela träningar och trupp behöver alla ledare peka på samma mapp i Drive.</p>
-    <p style="margin-bottom:1rem;"><b>Gör så här (en gång per enhet):</b><br>
-    1. Gå till Google Drive och öppna mappen "HHC Träningar"<br>
-    2. Kopiera mapp-ID:t ur adressfältet — den långa strängen efter <code style="font-size:11px;">folders/</code><br>
-    <span style="font-size:11px;color:var(--text-muted);">Ex: drive.google.com/drive/folders/<b>1ABC...xyz</b></span>
-    </p>
+    <p style="margin-bottom:1rem;">Du behöver ett mapp-ID för att komma åt lagets gemensamma träningar och trupp. Be en ledare som redan är ansluten om ID:t och klistra in det nedan.</p>
     <div style="margin-bottom:1rem;">
       <label style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Mapp-ID</label>
       <input type="text" id="driveFolderIdInput" placeholder="Klistra in mapp-ID här..." style="width:100%;font-size:13px;"/>
@@ -2621,11 +2639,14 @@ async function driveShowSaveRoster(){
   document.getElementById('driveModalBody').innerHTML=`<p>Sparar trupp till Drive...</p>`;
   document.getElementById('driveModalActions').innerHTML='';
   try{
-    const data={version:4,exportedAt:new Date().toISOString(),
+    const now=new Date();
+    const ts=now.toISOString().slice(0,16).replace('T','_').replace(':','-');
+    const filename=`trupp-${ts}.json`;
+    const data={version:4,exportedAt:now.toISOString(),
       players:players.map(({name,number,level,attendance,position})=>({name,number,level,attendance,position:position||null})),
       coaches:coaches.map(({name,coachType,attendance})=>({name,coachType,attendance}))};
-    await driveSaveFile('trupp.json',data);
-    document.getElementById('driveModalBody').innerHTML=`<p>&#10003; Truppen sparad som <b>trupp.json</b> i mappen <b>${esc(DRIVE_FOLDER_NAME)}</b> på Drive.</p>`;
+    await driveSaveFile(filename,data);
+    document.getElementById('driveModalBody').innerHTML=`<p>&#10003; Truppen sparad som <b>${esc(filename)}</b> i mappen <b>${esc(DRIVE_FOLDER_NAME)}</b> på Drive.</p>`;
     document.getElementById('driveModalActions').innerHTML=`<button class="btn" onclick="closeModal('driveModal')">Stäng</button>`;
   }catch(e){
     document.getElementById('driveModalBody').innerHTML=`<p style="color:var(--danger-txt);">Fel: ${esc(e.message)}</p>`;
