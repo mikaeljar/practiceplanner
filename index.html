@@ -2432,15 +2432,16 @@ function driveSignOut(){
   showBanner('Utloggad från Google Drive','var(--accent-light)','var(--accent-text)');
 }
 
-// Get or create HHC Träningar folder
+// Get or create HHC Träningar folder — searches own + shared drives
 async function driveGetFolder(){
   if(driveFolderId)return driveFolderId;
   const q=encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,
+  const r=await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&includeItemsFromAllDrives=true&supportsAllDrives=true&corpora=allDrives`,
     {headers:{Authorization:'Bearer '+driveAccessToken}});
   const d=await r.json();
   if(d.files&&d.files.length>0){driveFolderId=d.files[0].id;return driveFolderId;}
-  // Create folder
+  // No shared folder found — create own
   const cr=await fetch('https://www.googleapis.com/drive/v3/files',{
     method:'POST',
     headers:{Authorization:'Bearer '+driveAccessToken,'Content-Type':'application/json'},
@@ -2455,7 +2456,8 @@ async function driveGetFolder(){
 async function driveListFiles(prefix){
   const fid=await driveGetFolder();
   const q=encodeURIComponent(`'${fid}' in parents and name contains '${prefix}' and trashed=false`);
-  const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`,
+  const r=await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime%20desc&includeItemsFromAllDrives=true&supportsAllDrives=true`,
     {headers:{Authorization:'Bearer '+driveAccessToken}});
   const d=await r.json();
   return d.files||[];
@@ -2464,16 +2466,16 @@ async function driveListFiles(prefix){
 // Save JSON to Drive (create or update)
 async function driveSaveFile(filename,jsonData){
   const fid=await driveGetFolder();
-  // Check if file exists
   const q=encodeURIComponent(`name='${filename}' and '${fid}' in parents and trashed=false`);
-  const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`,
+  const r=await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&includeItemsFromAllDrives=true&supportsAllDrives=true`,
     {headers:{Authorization:'Bearer '+driveAccessToken}});
   const d=await r.json();
   const blob=new Blob([JSON.stringify(jsonData,null,2)],{type:'application/json'});
   if(d.files&&d.files.length>0){
     // Update existing
     const fileId=d.files[0].id;
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,{
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&supportsAllDrives=true`,{
       method:'PATCH',headers:{Authorization:'Bearer '+driveAccessToken,'Content-Type':'application/json'},body:blob});
   } else {
     // Create new — multipart
@@ -2481,7 +2483,7 @@ async function driveSaveFile(filename,jsonData){
     const form=new FormData();
     form.append('metadata',new Blob([meta],{type:'application/json'}));
     form.append('file',blob);
-    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',{
       method:'POST',headers:{Authorization:'Bearer '+driveAccessToken},body:form});
   }
 }
