@@ -2432,21 +2432,32 @@ function driveSignOut(){
   showBanner('Utloggad från Google Drive','var(--accent-light)','var(--accent-text)');
 }
 
-// Get or create HHC Träningar folder — searches own + shared drives
+// Get or create HHC Träningar folder — searches own + sharedWithMe
 async function driveGetFolder(){
   if(driveFolderId)return driveFolderId;
-  const q=encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const r=await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&includeItemsFromAllDrives=true&supportsAllDrives=true`,
-    {headers:{Authorization:'Bearer '+driveAccessToken}});
-  const d=await r.json();
-  console.log('[Drive] folder search result:', JSON.stringify(d));
-  if(d.files&&d.files.length>0){driveFolderId=d.files[0].id;console.log('[Drive] using folder id:',driveFolderId);return driveFolderId;}
-  // No shared folder found — create own
+
+  const headers={Authorization:'Bearer '+driveAccessToken};
+  const folderMime='application/vnd.google-apps.folder';
+
+  // Search 1: folders I own
+  const q1=encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='${folderMime}' and trashed=false and 'me' in owners`);
+  const r1=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q1}&fields=files(id,name)`,{headers});
+  const d1=await r1.json();
+  console.log('[Drive] own folder search:', JSON.stringify(d1));
+  if(d1.files&&d1.files.length>0){driveFolderId=d1.files[0].id;return driveFolderId;}
+
+  // Search 2: folders shared with me
+  const q2=encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='${folderMime}' and trashed=false and sharedWithMe=true`);
+  const r2=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q2}&fields=files(id,name)`,{headers});
+  const d2=await r2.json();
+  console.log('[Drive] sharedWithMe folder search:', JSON.stringify(d2));
+  if(d2.files&&d2.files.length>0){driveFolderId=d2.files[0].id;return driveFolderId;}
+
+  // Nothing found — create own folder
   const cr=await fetch('https://www.googleapis.com/drive/v3/files',{
     method:'POST',
-    headers:{Authorization:'Bearer '+driveAccessToken,'Content-Type':'application/json'},
-    body:JSON.stringify({name:DRIVE_FOLDER_NAME,mimeType:'application/vnd.google-apps.folder'})
+    headers:{...headers,'Content-Type':'application/json'},
+    body:JSON.stringify({name:DRIVE_FOLDER_NAME,mimeType:folderMime})
   });
   const cd=await cr.json();
   console.log('[Drive] created folder:', JSON.stringify(cd));
