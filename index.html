@@ -123,7 +123,8 @@ input:focus,select:focus{border-color:var(--accent);}
 /* Roster list */
 .roster-item{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:var(--radius);font-family:'Helvetica Neue',sans-serif;transition:background 0.1s;}
 .roster-item:hover{background:var(--surface2);}
-.item-num-badge{font-size:11px;color:var(--text-faint);min-width:28px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;}
+.item-num-badge{font-size:11px;color:var(--text-faint);flex-shrink:0;font-variant-numeric:tabular-nums;}
+.item-num-badge:empty{display:none;}
 .item-name{flex:1;font-size:14px;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .item-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;}
 /* Attendance */
