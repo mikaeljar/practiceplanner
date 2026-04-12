@@ -292,6 +292,20 @@ input:focus,select:focus{border-color:var(--accent);}
 .drive-file-date{font-size:11px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;white-space:nowrap;}
 .drive-section-title{font-size:11px;font-family:'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;margin-top:4px;}
 .drive-empty{font-size:13px;color:var(--text-faint);font-family:'Helvetica Neue',sans-serif;padding:12px 0;text-align:center;}
+/* Upplägg band + drill history */
+.upplägg-band{display:flex;align-items:center;gap:6px;padding:8px 0 10px;border-bottom:1px solid var(--border);margin-bottom:1.25rem;flex-wrap:wrap;}
+.drill-input-wrap{position:relative;flex:1;}
+.drill-history-btn{width:26px;height:28px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface2);color:var(--text-muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;transition:background 0.1s;}
+.drill-history-btn:hover{background:var(--border);color:var(--text);}
+.drill-history-dropdown{display:none;position:absolute;top:32px;left:0;z-index:30;background:var(--surface);border:0.5px solid var(--border-strong);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,0.13);min-width:220px;max-width:320px;overflow:hidden;}
+.drill-history-dropdown.open{display:block;}
+.drill-history-item{padding:8px 12px;font-size:13px;font-family:'Helvetica Neue',sans-serif;color:var(--text);cursor:pointer;border-bottom:0.5px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.drill-history-item:last-child{border-bottom:none;}
+.drill-history-item:hover{background:var(--surface2);}
+.drill-history-empty{padding:8px 12px;font-size:12px;color:var(--text-faint);font-family:'Helvetica Neue',sans-serif;}
+.source-badge{font-size:10px;padding:1px 5px;border-radius:10px;font-family:'Helvetica Neue',sans-serif;font-weight:500;flex-shrink:0;}
+.source-local{background:var(--surface2);color:var(--text-muted);border:0.5px solid var(--border-strong);}
+.source-drive{background:var(--accent-light);color:var(--accent-text);border:0.5px solid var(--accent-text);}
 #practiceCardWrap{display:flex;justify-content:center;margin-bottom:1.25rem;}
 </style>
 </head>
@@ -434,6 +448,12 @@ input:focus,select:focus{border-color:var(--accent);}
     </div>
     <!-- UPPLÄGG (sub-tab) -->
     <div id="sub-traning" style="display:none;">
+
+    <!-- Upplägg-band: spara/ladda upplägg -->
+    <div class="upplägg-band">
+      <button class="btn sm" onclick="loadUpplagg()">&#8593; Ladda upplägg</button>
+      <button class="btn sm primary" onclick="saveUpplaggInit()">&#8595; Spara upplägg</button>
+    </div>
 
     <!-- Träningsbild -->
     <div class="stations-panel" id="practiceImagePanel">
@@ -636,6 +656,35 @@ input:focus,select:focus{border-color:var(--accent);}
   </div>
 </div>
 
+<!-- Spara upplägg modal -->
+<div class="modal-overlay" id="saveUpplaggModal">
+  <div class="modal" style="max-width:420px;">
+    <h2>Spara upplägg</h2>
+    <p>Ge upplägget ett namn så du enkelt kan känna igen det senare.</p>
+    <div style="margin-bottom:1rem;">
+      <label style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Namn</label>
+      <input type="text" id="upplaggNameInput" placeholder="T.ex. Powerplay v16" style="width:100%;"/>
+    </div>
+    <div class="modal-actions" style="flex-direction:column;gap:8px;">
+      <button class="btn primary" style="width:100%;height:40px;" onclick="saveUpplaggLocal()">&#128190; Spara lokalt</button>
+      <button class="btn" style="width:100%;height:40px;" id="saveUpplaggDriveBtn" onclick="saveUpplaggDrive()">&#9729; Spara till Drive</button>
+      <button class="btn" onclick="closeModal('saveUpplaggModal')">Avbryt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ladda upplägg modal -->
+<div class="modal-overlay" id="loadUpplaggModal">
+  <div class="modal" style="max-width:480px;">
+    <h2>Ladda upplägg</h2>
+    <p>Välj ett upplägg att ladda. Stationer och träningsbild ersätts — närvaro och grupper påverkas inte.</p>
+    <div id="upplaggFileList"><div class="drive-empty">Inga sparade upplägg hittades.</div></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('loadUpplaggModal')">Stäng</button>
+    </div>
+  </div>
+</div>
+
 <!-- Google Drive modal -->
 <div class="modal-overlay" id="driveModal">
   <div class="modal" style="max-width:480px;">
@@ -699,6 +748,8 @@ function clearPracticeImage(){
 // ── Storage ───────────────────────────────────────────────────────────
 function save(){
   try{
+    // Record drill history for each station
+    stations.forEach(s=>{if(s.hasDrill&&s.drill&&s.drill.trim())saveDrillToHistory(s.label,s.drill);});
     const practiceDate=document.getElementById('practiceDate')?.value||'';
     // Store groups/goalies/pool by player NAME (not ID) so they survive reload
     const coachNameById=id=>coaches.find(c=>String(c.id)===String(id))?.name||null;
@@ -907,7 +958,11 @@ function renderStationer(){
     html+=`<div class="station-row">
       <div class="station-left">
         <span class="station-label">${esc(st.label)}</span>
-        ${st.hasDrill?`<input class="station-drill-input" type="text" placeholder="Övning (valfritt)" value="${esc(st.drill)}" data-si="${si}" oninput="stationDrillChange(this)" maxlength="80"/>`:''}
+        ${st.hasDrill?`<div style="display:flex;align-items:center;gap:4px;position:relative;">
+          <input class="station-drill-input" type="text" placeholder="Övning (valfritt)" value="${esc(st.drill)}" data-si="${si}" oninput="stationDrillChange(this)" maxlength="80" style="flex:1;"/>
+          <button class="drill-history-btn" title="Tidigare övningar" onclick="toggleDrillHistory(event,${si})">&#128337;</button>
+          <div class="drill-history-dropdown" id="dh-${si}"></div>
+        </div>`:''}
       </div>
       <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
         <div style="display:flex;flex-wrap:wrap;gap:5px;min-height:24px;">${chips||'<span style="font-size:12px;color:var(--text-faint);font-family:Helvetica Neue,sans-serif;font-style:italic;">Ingen ledare vald</span>'}</div>
@@ -2168,6 +2223,203 @@ function loadPracticeFromFile(evt){
   reader.readAsText(file);evt.target.value='';
 }
 
+// ── Upplägg: spara & ladda ────────────────────────────────────────────
+const UPPLAGG_STORAGE_KEY='hhc-upplagg-list'; // [{name, date, data}]
+
+function getUpplaggData(){
+  return{
+    numStations,
+    stations:stations.map(({label,drill,fixed,hasDrill})=>({label,drill,fixed,hasDrill})),
+    practiceImageData:practiceImageData||null
+  };
+}
+
+function saveUpplaggInit(){
+  const today=new Date().toLocaleDateString('sv-SE');
+  document.getElementById('upplaggNameInput').value=today;
+  const driveBtn=document.getElementById('saveUpplaggDriveBtn');
+  if(driveBtn)driveBtn.disabled=!driveAccessToken;
+  openModal('saveUpplaggModal');
+  setTimeout(()=>{
+    const inp=document.getElementById('upplaggNameInput');
+    if(inp){inp.select();}
+  },100);
+}
+
+function saveUpplaggLocal(){
+  const name=document.getElementById('upplaggNameInput').value.trim();
+  if(!name){showBanner('Ange ett namn','var(--warn-bg)','var(--warn-txt)');return;}
+  const list=JSON.parse(localStorage.getItem(UPPLAGG_STORAGE_KEY)||'[]');
+  list.unshift({name,date:new Date().toISOString(),data:getUpplaggData()});
+  // Keep max 20
+  if(list.length>20)list.length=20;
+  localStorage.setItem(UPPLAGG_STORAGE_KEY,JSON.stringify(list));
+  closeModal('saveUpplaggModal');
+  showBanner('Upplägg "'+name+'" sparat lokalt','var(--on-bg)','var(--on-txt)');
+}
+
+async function saveUpplaggDrive(){
+  if(!driveAccessToken){showBanner('Logga in på Drive först','var(--warn-bg)','var(--warn-txt)');return;}
+  const name=document.getElementById('upplaggNameInput').value.trim();
+  if(!name){showBanner('Ange ett namn','var(--warn-bg)','var(--warn-txt)');return;}
+  const safe=name.replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'').trim()||'upplägg';
+  const ts=new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
+  const filename=`upplägg-${safe}-${ts}.json`;
+  const btn=document.getElementById('saveUpplaggDriveBtn');
+  if(btn){btn.disabled=true;btn.textContent='Sparar...';}
+  try{
+    await driveSaveFile(filename,{name,...getUpplaggData()});
+    closeModal('saveUpplaggModal');
+    showBanner('Upplägg "'+name+'" sparat till Drive','var(--on-bg)','var(--on-txt)');
+  }catch(e){
+    showBanner('Drive-fel: '+e.message,'var(--danger-bg)','var(--danger-txt)');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='⛅ Spara till Drive';}
+  }
+}
+
+async function loadUpplagg(){
+  const list=JSON.parse(localStorage.getItem(UPPLAGG_STORAGE_KEY)||'[]');
+  let html='';
+  if(list.length){
+    html+=`<div class="drive-section-title" style="margin-top:0;">Lokalt sparade</div>`;
+    html+=`<div class="drive-file-list">`;
+    html+=list.map((item,i)=>{
+      const d=new Date(item.date);
+      const ds=d.toLocaleDateString('sv-SE',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
+      return `<div class="drive-file-item" onclick="applyUpplagg(${i},'local')">
+        <span class="source-badge source-local">Lokalt</span>
+        <span class="drive-file-name">${esc(item.name)}</span>
+        <span class="drive-file-date">${ds}</span>
+      </div>`;
+    }).join('');
+    html+=`</div>`;
+  }
+
+  // Drive files
+  if(driveAccessToken&&driveFolderId){
+    html+=`<div class="drive-section-title" style="margin-top:12px;">Drive</div>`;
+    html+=`<div id="upplaggDriveList"><div class="drive-empty">Hämtar...</div></div>`;
+  } else if(!driveAccessToken){
+    html+=`<p style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-top:10px;">Logga in på Drive för att se Drive-sparade upplägg.</p>`;
+  }
+
+  if(!list.length&&!driveAccessToken){
+    html='<div class="drive-empty">Inga sparade upplägg hittades.</div>';
+  }
+
+  document.getElementById('upplaggFileList').innerHTML=html||'<div class="drive-empty">Inga sparade upplägg hittades.</div>';
+  openModal('loadUpplaggModal');
+
+  // Fetch Drive files async
+  if(driveAccessToken&&driveFolderId){
+    try{
+      const files=await driveListFiles('upplägg-');
+      const driveEl=document.getElementById('upplaggDriveList');
+      if(!driveEl)return;
+      if(!files.length){driveEl.innerHTML='<div class="drive-empty">Inga Drive-upplägg hittades.</div>';return;}
+      driveEl.innerHTML=`<div class="drive-file-list">`+files.map(f=>{
+        const d=new Date(f.modifiedTime);
+        const ds=d.toLocaleDateString('sv-SE',{day:'numeric',month:'short',year:'numeric'});
+        const displayName=f.name.replace(/^upplägg-/,'').replace(/-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.json$/,'').replace(/_/g,' ')||f.name;
+        return `<div class="drive-file-item" onclick="applyUpplaggDrive('${f.id}')">
+          <span class="source-badge source-drive">Drive</span>
+          <span class="drive-file-name">${esc(displayName)}</span>
+          <span class="drive-file-date">${ds}</span>
+        </div>`;
+      }).join('')+`</div>`;
+    }catch(e){
+      const driveEl=document.getElementById('upplaggDriveList');
+      if(driveEl)driveEl.innerHTML=`<div class="drive-empty">Kunde inte hämta från Drive.</div>`;
+    }
+  }
+}
+
+function applyUpplagg(index,source){
+  const list=JSON.parse(localStorage.getItem(UPPLAGG_STORAGE_KEY)||'[]');
+  const item=list[index];
+  if(!item)return;
+  doApplyUpplagg(item.data,item.name);
+  closeModal('loadUpplaggModal');
+}
+
+async function applyUpplaggDrive(fileId){
+  try{
+    const d=await driveLoadFile(fileId);
+    doApplyUpplagg(d,d.name||'Drive-upplägg');
+    closeModal('loadUpplaggModal');
+  }catch(e){
+    showBanner('Kunde inte ladda upplägg: '+e.message,'var(--danger-bg)','var(--danger-txt)');
+  }
+}
+
+function doApplyUpplagg(d,name){
+  if(d.numStations){numStations=d.numStations;stations=makeStations();}
+  if(d.stations)d.stations.forEach((ds,i)=>{
+    if(!stations[i])return;
+    stations[i].drill=ds.drill||'';
+  });
+  if(d.practiceImageData){
+    practiceImageData=d.practiceImageData;
+    try{document.getElementById('practiceImageEl').src=practiceImageData;document.getElementById('practiceImagePreview').style.display='block';}catch(e){}
+  } else {
+    clearPracticeImage();
+  }
+  save();renderStationer();
+  showBanner('Upplägg "'+name+'" laddat','var(--on-bg)','var(--on-txt)');
+}
+
+// ── Drill history ─────────────────────────────────────────────────────
+const DRILL_HISTORY_KEY='hhc-drill-history'; // {label: [drill,...]}
+
+function getDrillHistory(){
+  try{return JSON.parse(localStorage.getItem(DRILL_HISTORY_KEY)||'{}');}catch{return{};}
+}
+
+function saveDrillToHistory(label,drill){
+  if(!drill||!drill.trim())return;
+  const h=getDrillHistory();
+  if(!h[label])h[label]=[];
+  // Remove duplicate, add to front
+  h[label]=h[label].filter(d=>d!==drill);
+  h[label].unshift(drill);
+  if(h[label].length>8)h[label].length=8;
+  localStorage.setItem(DRILL_HISTORY_KEY,JSON.stringify(h));
+}
+
+function toggleDrillHistory(e,si){
+  e.stopPropagation();
+  const dd=document.getElementById('dh-'+si);
+  if(!dd)return;
+  const wasOpen=dd.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.drill-history-dropdown').forEach(d=>d.classList.remove('open'));
+  if(wasOpen)return;
+  const label=stations[si].label;
+  const h=getDrillHistory();
+  const items=h[label]||[];
+  dd.innerHTML=items.length
+    ?items.map(d=>`<div class="drill-history-item" onclick="pickDrillHistory(${si},'${esc(d).replace(/'/g,'&#39;')}')">${esc(d)}</div>`).join('')
+    :`<div class="drill-history-empty">Ingen historik ännu</div>`;
+  dd.classList.add('open');
+  // Close on outside click
+  setTimeout(()=>document.addEventListener('click',()=>dd.classList.remove('open'),{once:true}),0);
+}
+
+function pickDrillHistory(si,drill){
+  stations[si].drill=drill;
+  save();renderStationer();
+}
+
+// Hook into save to record drill history
+const _origSave=save;
+// Patch stationDrillChange to also record history on blur/save
+function stationDrillChangeWithHistory(input){
+  const si=parseInt(input.dataset.si,10);
+  stations[si].drill=input.value;
+  save();
+}
+
 // ── Export / Import / Share ───────────────────────────────────────────
 let exportBlob=null;
 function exportRoster(){
@@ -2700,6 +2952,8 @@ async function driveLoadRoster(fileId,filename){
 }
 
 document.getElementById('driveModal').addEventListener('click',function(e){if(e.target===this)closeModal('driveModal');});
+document.getElementById('saveUpplaggModal').addEventListener('click',function(e){if(e.target===this)closeModal('saveUpplaggModal');});
+document.getElementById('loadUpplaggModal').addEventListener('click',function(e){if(e.target===this)closeModal('loadUpplaggModal');});
 
 // ── PWA Service Worker (offline-stöd) ────────────────────────────────
 if('serviceWorker' in navigator){
