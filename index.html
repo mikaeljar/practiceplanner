@@ -646,6 +646,9 @@ input:focus,select:focus{border-color:var(--accent);}
         <div class="panel">
           <p class="panel-title">Spelare (<span id="rosterCount">0</span>)</p>
           <div class="scroll-list" id="playerList"><div class="empty-state">Inga spelare ännu.</div></div>
+          <div id="setAllForwardWrap" style="display:none;margin-top:8px;">
+            <button class="btn sm" onclick="setAllForward()">Sätt alla utan position till Forward</button>
+          </div>
         </div>
         <div class="panel">
           <p class="panel-title">Ledare (<span id="coachCount">0</span>)</p>
@@ -3816,19 +3819,12 @@ function renderSettingsTab(){
     :'<div class="drive-empty">Inga par tillagda ännu.</div>';
 
   el.innerHTML=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
-      <button class="btn sm" onclick="lockSettings()">${ICO.cross} Lås inställningar</button>
-    </div>
-
     <div class="panel" style="margin-bottom:1.5rem;">
       <p class="panel-title">Generella inställningar</p>
-      <label style="display:flex;align-items:center;gap:8px;font-family:'Helvetica Neue',sans-serif;font-size:13px;color:var(--text);cursor:pointer;margin-bottom:8px;">
+      <label style="display:flex;align-items:center;gap:8px;font-family:'Helvetica Neue',sans-serif;font-size:13px;color:var(--text);cursor:pointer;">
         <input type="checkbox" id="usePositionsToggle" onchange="toggleUsePositions()" style="width:16px;height:16px;cursor:pointer;" ${usePositions?'checked':''}/>
         Använd positioner
       </label>
-      <div id="setAllForwardWrap" style="display:${usePositions?'block':'none'};">
-        <button class="btn sm" onclick="setAllForward()">Sätt alla utan position till Forward</button>
-      </div>
     </div>
 
     <div class="panel" style="margin-bottom:1.5rem;">
