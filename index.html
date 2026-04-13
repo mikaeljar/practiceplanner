@@ -1599,12 +1599,16 @@ function generateGroups(){
       const a=shuffle(pool.filter(p=>p.level==='a'));
       const b=shuffle(pool.filter(p=>p.level==='b'));
       const c=shuffle(pool.filter(p=>p.level==='c'));
-      pool=[...a,...b,...c];
+      const d=shuffle(pool.filter(p=>p.level==='d'));
+      const e=shuffle(pool.filter(p=>p.level==='e'));
+      pool=[...a,...b,...c,...d,...e];
     } else {
       const a=shuffle(pool.filter(p=>p.level==='a'));
       const b=shuffle(pool.filter(p=>p.level==='b'));
       const c=shuffle(pool.filter(p=>p.level==='c'));
-      pool=interleave([a,b,c]);
+      const d=shuffle(pool.filter(p=>p.level==='d'));
+      const e=shuffle(pool.filter(p=>p.level==='e'));
+      pool=interleave([a,b,c,d,e]);
     }
     for(let i=0;i<pool.length;i+=size){
       const grpPlayers=pool.slice(i,i+size);
