@@ -2559,36 +2559,40 @@ function saveTraningDevice(){
 }
 
 // ── Lista-hjälpare: lokalt med radera, Drive med paginering ──────────
-const PAGE_SIZE=10;
+const PAGE_SIZE_TRANING=5;
+const PAGE_SIZE_ROSTER=5;
+const PAGE_SIZE_UPPLAGG=10;
 
 function localListHTML(list,loadFn,downloadFn,deleteFn){
   if(!list.length)return'';
   return list.map((item,i)=>{
     const d=new Date(item.date);
     const ds=d.toLocaleDateString('sv-SE',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
-    return `<div class="drive-file-item">
-      <span class="source-badge source-local">Lokalt</span>
-      <span class="drive-file-name" style="cursor:pointer;" onclick="${loadFn}(${i})">${esc(item.name)}</span>
-      <span class="drive-file-date">${ds}</span>
-      <button class="btn sm" title="Ladda ner" onclick="${downloadFn}(${i})" style="flex-shrink:0;"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="pointer-events:none;"><path d="M5.5 2v7M2 6.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <button class="btn sm danger" title="Ta bort" onclick="${deleteFn}(${i})" style="flex-shrink:0;"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="pointer-events:none;"><path d="M2 3.5h7M4.5 3.5V2.5h2v1M4 3.5l.4 5h2.2l.4-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    return `<div class="drive-file-item" style="flex-direction:column;align-items:stretch;gap:4px;cursor:default;">
+      <span class="drive-file-name" style="cursor:pointer;font-weight:500;" onclick="${loadFn}(${i})">${esc(item.name)}</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+        <span class="drive-file-date">${ds}</span>
+        <div style="display:flex;gap:4px;flex-shrink:0;">
+          <button class="btn sm" title="Ladda ner" onclick="${downloadFn}(${i})"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="pointer-events:none;"><path d="M5.5 2v7M2 6.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn sm danger" title="Ta bort" onclick="${deleteFn}(${i})"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="pointer-events:none;"><path d="M2 3.5h7M4.5 3.5V2.5h2v1M4 3.5l.4 5h2.2l.4-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+      </div>
     </div>`;
   }).join('');
 }
 
-function driveListHTML(files,nameFn,clickFn,containerId,page=0){
+function driveListHTML(files,nameFn,clickFn,containerId,page=0,pageSize=10){
   if(!files.length)return'<div class="drive-empty">Inga filer hittades.</div>';
-  const start=page*PAGE_SIZE;
-  const slice=files.slice(start,start+PAGE_SIZE);
-  const remaining=files.length-(start+PAGE_SIZE);
+  const start=page*pageSize;
+  const slice=files.slice(start,start+pageSize);
+  const remaining=files.length-(start+pageSize);
   let html=`<div class="drive-file-list" id="${containerId}-list">`;
   html+=slice.map(f=>{
     const d=new Date(f.modifiedTime);
     const ds=d.toLocaleDateString('sv-SE',{day:'numeric',month:'short',year:'numeric'});
     const displayName=nameFn(f.name);
-    return `<div class="drive-file-item">
-      <span class="source-badge source-drive">Drive</span>
-      <span class="drive-file-name" style="cursor:pointer;" onclick="${clickFn}('${f.id}')">${esc(displayName)}</span>
+    return `<div class="drive-file-item" style="flex-direction:column;align-items:stretch;gap:4px;">
+      <span class="drive-file-name" style="cursor:pointer;font-weight:500;" onclick="${clickFn}('${f.id}')">${esc(displayName)}</span>
       <span class="drive-file-date">${ds}</span>
     </div>`;
   }).join('');
@@ -2608,15 +2612,15 @@ function driveShowMore(containerId,page){
   if(!el)return;
   const cfg=_drivePageConfig[containerId];
   if(!cfg)return;
-  el.innerHTML=driveListHTML(files,cfg.nameFn,cfg.clickFn,containerId,page);
+  el.innerHTML=driveListHTML(files,cfg.nameFn,cfg.clickFn,containerId,page,cfg.pageSize);
 }
 const _drivePageConfig={};
 
-function initDriveList(containerId,files,nameFn,clickFn){
+function initDriveList(containerId,files,nameFn,clickFn,pageSize=10){
   _driveCache[containerId]=files;
-  _drivePageConfig[containerId]={nameFn,clickFn};
+  _drivePageConfig[containerId]={nameFn,clickFn,pageSize};
   const el=document.getElementById(containerId);
-  if(el)el.innerHTML=driveListHTML(files,nameFn,clickFn,containerId,0);
+  if(el)el.innerHTML=driveListHTML(files,nameFn,clickFn,containerId,0,pageSize);
 }
 
 // ── Delete local items ────────────────────────────────────────────────
@@ -2662,7 +2666,7 @@ async function loadTraningInit(){
       if(!files.length){el.innerHTML='<div class="drive-empty">Inga Drive-träningar hittades.</div>';return;}
       const nameFn=n=>n.replace(/^traning-/,'').replace(/\.json$/,'').replace(/-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$/,'').replace(/-/g,' ')||n;
       el.innerHTML=driveListHTML(files,nameFn,'applyTraningDrive','traningDriveList',0);
-      initDriveList('traningDriveList',files,nameFn,'applyTraningDrive');
+      initDriveList('traningDriveList',files,nameFn,'applyTraningDrive',PAGE_SIZE_TRANING);
     }catch(e){
       const el=document.getElementById('traningDriveList');
       if(el)el.innerHTML='<div class="drive-empty">Kunde inte hämta från Drive.</div>';
@@ -2802,7 +2806,7 @@ async function loadRosterInit(){
       const el=document.getElementById('rosterDriveList');if(!el)return;
       if(!files.length){el.innerHTML='<div class="drive-empty">Inga Drive-truppar hittades.</div>';return;}
       const nameFn=n=>n.replace(/^trupp-/,'').replace(/\.json$/,'').replace(/-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$/,'').replace(/-/g,' ')||n;
-      initDriveList('rosterDriveList',files,nameFn,'applyRosterDrive');
+      initDriveList('rosterDriveList',files,nameFn,'applyRosterDrive',PAGE_SIZE_ROSTER);
     }catch(e){
       const el=document.getElementById('rosterDriveList');
       if(el)el.innerHTML='<div class="drive-empty">Kunde inte hämta från Drive.</div>';
@@ -2927,7 +2931,7 @@ async function loadUpplagg(){
       if(!driveEl)return;
       if(!files.length){driveEl.innerHTML='<div class="drive-empty">Inga Drive-upplägg hittades.</div>';return;}
       const nameFn=n=>n.replace(/^upplägg-/,'').replace(/-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.json$/,'').replace(/_/g,' ')||n;
-      initDriveList('upplaggDriveList',files,nameFn,'applyUpplaggDrive');
+      initDriveList('upplaggDriveList',files,nameFn,'applyUpplaggDrive',PAGE_SIZE_UPPLAGG);
     }catch(e){
       const driveEl=document.getElementById('upplaggDriveList');
       if(driveEl)driveEl.innerHTML=`<div class="drive-empty">Kunde inte hämta från Drive.</div>`;
