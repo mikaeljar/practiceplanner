@@ -571,33 +571,8 @@ input:focus,select:focus{border-color:var(--accent);}
     </div>
   </div>
 
-  <!-- INSTÄLLNINGAR -->
-  <div id="top-settings" style="display:none;">
-    <div class="panel" style="margin-bottom:1.5rem;">
-      <p class="panel-title">Grupphistorik</p>
-      <p style="font-size:13px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">Historik sparas automatiskt när du visar träningskortet. Max 10 träningar sparas.</p>
-      <div id="groupHistoryList"></div>
-      <div style="margin-top:1rem;">
-        <button class="btn sm danger" onclick="clearGroupHistory()">Rensa all historik</button>
-      </div>
-    </div>
-    <div class="panel">
-      <p class="panel-title">Håll isär</p>
-      <p style="font-size:13px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">Spelare i samma par försöker placeras i olika grupper. Om det inte är möjligt placeras de med samma färg (samma lag).</p>
-      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
-        <div style="flex:1;min-width:120px;">
-          <div style="font-size:11px;font-family:'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:5px;">Spelare 1</div>
-          <select id="holdApartP1" style="width:100%;height:32px;font-size:13px;"><option value="">— Välj spelare —</option></select>
-        </div>
-        <div style="flex:1;min-width:120px;">
-          <div style="font-size:11px;font-family:'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:5px;">Spelare 2</div>
-          <select id="holdApartP2" style="width:100%;height:32px;font-size:13px;"><option value="">— Välj spelare —</option></select>
-        </div>
-        <button class="btn sm primary" onclick="addHoldApartPair()">Lägg till</button>
-      </div>
-      <div id="holdApartList"></div>
-    </div>
-  </div>
+  <!-- INSTÄLLNINGAR (renderas dynamiskt) -->
+  <div id="top-settings" style="display:none;"></div>
 
   <!-- ROSTER -->
   <div id="top-roster" style="display:none;">
@@ -666,15 +641,6 @@ input:focus,select:focus{border-color:var(--accent);}
           </div>
         </div>
 
-        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
-          <label style="display:flex;align-items:center;gap:8px;font-family:'Helvetica Neue',sans-serif;font-size:13px;color:var(--text);cursor:pointer;">
-            <input type="checkbox" id="usePositionsToggle" onchange="toggleUsePositions()" style="width:16px;height:16px;cursor:pointer;"/>
-            Använd positioner
-          </label>
-          <div id="setAllForwardWrap" style="display:none;margin-top:8px;">
-            <button class="btn sm" onclick="setAllForward()">Sätt alla utan position till Forward</button>
-          </div>
-        </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:1.25rem;">
         <div class="panel">
@@ -1042,6 +1008,7 @@ function loadFromStorage(){
 // ── Tab navigation ────────────────────────────────────────────────────
 let currentTop='plan',currentSub='attendance';
 function switchTopTab(t){
+  if(currentTop==='settings'&&t!=='settings')_settingsUnlocked=false;
   currentTop=t;
   document.getElementById('top-plan').style.display=t==='plan'?'':'none';
   document.getElementById('top-roster').style.display=t==='roster'?'':'none';
@@ -1049,7 +1016,7 @@ function switchTopTab(t){
   document.getElementById('traningBand').style.display=t==='plan'?'':'none';
   document.querySelectorAll('.top-tab').forEach((el,i)=>el.classList.toggle('active',['plan','roster','settings'][i]===t));
   if(t==='plan'&&currentSub==='attendance')renderAttendance();
-  if(t==='settings')renderSettingsTab();
+  if(t==='settings')openSettingsTab();
 }
 function switchSubTab(t){
   currentSub=t;
@@ -3691,6 +3658,82 @@ async function driveLoadRoster(fileId,filename){
 }
 
 
+// ── Inställningar — lösenord ──────────────────────────────────────────
+const SETTINGS_PWD_KEY='hhc-settings-pwd';
+let _settingsUnlocked=false;
+
+async function hashPassword(pwd){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pwd));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function openSettingsTab(){
+  const stored=localStorage.getItem(SETTINGS_PWD_KEY);
+  if(!stored){renderSettingsPasswordSetup();}
+  else if(!_settingsUnlocked){renderSettingsPasswordPrompt();}
+  else{renderSettingsTab();}
+}
+
+function renderSettingsPasswordSetup(){
+  const el=document.getElementById('top-settings');if(!el)return;
+  el.innerHTML=`
+    <div class="panel" style="max-width:420px;margin:2rem auto;">
+      <p class="panel-title">Välj lösenord för Inställningar</p>
+      <p style="font-size:13px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:1.25rem;line-height:1.6;">Inställningar skyddas med ett lösenord. Det finns ingen återställningsfunktion — glömmer du lösenordet behöver du rensa webbläsarens lokala data manuellt.</p>
+      <div style="display:flex;gap:8px;margin-bottom:0.5rem;">
+        <input type="password" id="settingsPwdNew" placeholder="Välj lösenord" style="flex:1;" onkeydown="if(event.key==='Enter')setSettingsPassword()"/>
+        <button class="btn primary" onclick="setSettingsPassword()">Spara</button>
+      </div>
+      <p id="settingsPwdError" style="color:var(--danger-txt);font-size:12px;font-family:'Helvetica Neue',sans-serif;min-height:18px;"></p>
+    </div>`;
+  setTimeout(()=>document.getElementById('settingsPwdNew')?.focus(),50);
+}
+
+function renderSettingsPasswordPrompt(){
+  const el=document.getElementById('top-settings');if(!el)return;
+  el.innerHTML=`
+    <div class="panel" style="max-width:420px;margin:2rem auto;">
+      <p class="panel-title">Inställningar</p>
+      <div style="display:flex;gap:8px;margin-bottom:0.5rem;">
+        <input type="password" id="settingsPwdInput" placeholder="Lösenord" style="flex:1;" onkeydown="if(event.key==='Enter')confirmSettingsPassword()"/>
+        <button class="btn primary" onclick="confirmSettingsPassword()">Öppna</button>
+      </div>
+      <p id="settingsPwdError" style="color:var(--danger-txt);font-size:12px;font-family:'Helvetica Neue',sans-serif;min-height:18px;"></p>
+    </div>`;
+  setTimeout(()=>document.getElementById('settingsPwdInput')?.focus(),50);
+}
+
+async function confirmSettingsPassword(){
+  const pwd=document.getElementById('settingsPwdInput')?.value||'';
+  if(!pwd)return;
+  const hash=await hashPassword(pwd);
+  if(hash===localStorage.getItem(SETTINGS_PWD_KEY)){
+    _settingsUnlocked=true;
+    renderSettingsTab();
+  }else{
+    const err=document.getElementById('settingsPwdError');
+    if(err)err.textContent='Fel lösenord';
+  }
+}
+
+async function setSettingsPassword(){
+  const pwd=document.getElementById('settingsPwdNew')?.value.trim()||'';
+  if(!pwd){
+    const err=document.getElementById('settingsPwdError');
+    if(err)err.textContent='Ange ett lösenord';
+    return;
+  }
+  const hash=await hashPassword(pwd);
+  localStorage.setItem(SETTINGS_PWD_KEY,hash);
+  _settingsUnlocked=true;
+  renderSettingsTab();
+}
+
+function lockSettings(){
+  _settingsUnlocked=false;
+  renderSettingsPasswordPrompt();
+}
+
 // ── Grupphistorik ─────────────────────────────────────────────────────
 const GROUP_HISTORY_KEY='hhc-group-history';
 const HOLD_APART_KEY='hhc-hold-apart';
@@ -3747,48 +3790,74 @@ function deleteHoldApartPair(index){
 }
 
 function renderSettingsTab(){
-  renderGroupHistoryUI();
-  renderHoldApartUI();
-}
-
-function renderGroupHistoryUI(){
-  const el=document.getElementById('groupHistoryList');
-  if(!el)return;
-  const history=getGroupHistory();
-  if(!history.length){
-    el.innerHTML='<div class="drive-empty">Ingen historik sparad ännu. Historik sparas när du visar träningskortet.</div>';
-    return;
-  }
-  el.innerHTML=history.map((snap,i)=>{
-    const summary=snap.groups.map(g=>`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${esc(g.colour)};margin-right:3px;vertical-align:middle;"></span>${g.players.length} sp.`).join('&ensp;');
-    return `<div class="roster-item" style="border-bottom:1px solid var(--border);padding:8px 4px;">
-      <div style="flex:1;">
-        <span style="font-size:13px;color:var(--text);">${esc(snap.date)}</span>
-        <span style="font-size:12px;color:var(--text-muted);margin-left:10px;">${summary}</span>
-      </div>
-      <button class="btn sm danger" onclick="deleteGroupHistoryItem(${i})" title="Ta bort">${ICO.cross}</button>
-    </div>`;
-  }).join('');
-}
-
-function renderHoldApartUI(){
-  const p1sel=document.getElementById('holdApartP1');
-  const p2sel=document.getElementById('holdApartP2');
-  if(!p1sel||!p2sel)return;
+  const el=document.getElementById('top-settings');if(!el)return;
   const activePlayers=players.filter(p=>!p.guest).sort((a,b)=>a.name.localeCompare(b.name,'sv'));
-  const opts=`<option value="">— Välj spelare —</option>`+activePlayers.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
-  p1sel.innerHTML=opts;
-  p2sel.innerHTML=opts;
-  const listEl=document.getElementById('holdApartList');
-  if(!listEl)return;
-  const list=getHoldApart();
-  if(!list.length){listEl.innerHTML='<div class="drive-empty">Inga par tillagda ännu.</div>';return;}
-  listEl.innerHTML=list.map((pair,i)=>`
-    <div class="roster-item" style="border-bottom:1px solid var(--border);padding:8px 4px;">
-      <span style="flex:1;font-size:13px;color:var(--text);">${esc(pair.player1)}&ensp;<span style="color:var(--text-muted);">↔</span>&ensp;${esc(pair.player2)}</span>
-      <button class="btn sm danger" onclick="deleteHoldApartPair(${i})" title="Ta bort">${ICO.cross}</button>
-    </div>`).join('');
+  const playerOpts=`<option value="">— Välj spelare —</option>`+activePlayers.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+  const history=getGroupHistory();
+  const holdList=getHoldApart();
+
+  const historyHTML=history.length
+    ?history.map((snap,i)=>`
+      <div class="roster-item" style="border-bottom:1px solid var(--border);padding:8px 4px;">
+        <div style="flex:1;">
+          <span style="font-size:13px;color:var(--text);">${esc(snap.date)}</span>
+          <span style="font-size:12px;color:var(--text-muted);margin-left:10px;">${snap.groups.map(g=>`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${esc(g.colour)};margin-right:3px;vertical-align:middle;"></span>${g.players.length} sp.`).join('&ensp;')}</span>
+        </div>
+        <button class="btn sm danger" onclick="deleteGroupHistoryItem(${i})" title="Ta bort">${ICO.cross}</button>
+      </div>`).join('')
+    :'<div class="drive-empty">Ingen historik sparad ännu. Historik sparas när du visar träningskortet.</div>';
+
+  const holdHTML=holdList.length
+    ?holdList.map((pair,i)=>`
+      <div class="roster-item" style="border-bottom:1px solid var(--border);padding:8px 4px;">
+        <span style="flex:1;font-size:13px;color:var(--text);">${esc(pair.player1)}&ensp;<span style="color:var(--text-muted);">↔</span>&ensp;${esc(pair.player2)}</span>
+        <button class="btn sm danger" onclick="deleteHoldApartPair(${i})" title="Ta bort">${ICO.cross}</button>
+      </div>`).join('')
+    :'<div class="drive-empty">Inga par tillagda ännu.</div>';
+
+  el.innerHTML=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+      <button class="btn sm" onclick="lockSettings()">${ICO.cross} Lås inställningar</button>
+    </div>
+
+    <div class="panel" style="margin-bottom:1.5rem;">
+      <p class="panel-title">Generella inställningar</p>
+      <label style="display:flex;align-items:center;gap:8px;font-family:'Helvetica Neue',sans-serif;font-size:13px;color:var(--text);cursor:pointer;margin-bottom:8px;">
+        <input type="checkbox" id="usePositionsToggle" onchange="toggleUsePositions()" style="width:16px;height:16px;cursor:pointer;" ${usePositions?'checked':''}/>
+        Använd positioner
+      </label>
+      <div id="setAllForwardWrap" style="display:${usePositions?'block':'none'};">
+        <button class="btn sm" onclick="setAllForward()">Sätt alla utan position till Forward</button>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:1.5rem;">
+      <p class="panel-title">Grupphistorik</p>
+      <p style="font-size:13px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">Historik sparas automatiskt när du visar träningskortet. Max 10 träningar sparas.</p>
+      <div id="groupHistoryList">${historyHTML}</div>
+      <div style="margin-top:1rem;">
+        <button class="btn sm danger" onclick="clearGroupHistory()">Rensa all historik</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="panel-title">Håll isär</p>
+      <p style="font-size:13px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">Spelare i samma par försöker placeras i olika grupper. Om det inte är möjligt placeras de med samma färg (samma lag).</p>
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
+        <div style="flex:1;min-width:120px;">
+          <div style="font-size:11px;font-family:'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:5px;">Spelare 1</div>
+          <select id="holdApartP1" style="width:100%;height:32px;font-size:13px;">${playerOpts}</select>
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <div style="font-size:11px;font-family:'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:5px;">Spelare 2</div>
+          <select id="holdApartP2" style="width:100%;height:32px;font-size:13px;">${playerOpts}</select>
+        </div>
+        <button class="btn sm primary" onclick="addHoldApartPair()">Lägg till</button>
+      </div>
+      <div id="holdApartList">${holdHTML}</div>
+    </div>`;
 }
+
 
 // ── Historik-algoritm ─────────────────────────────────────────────────
 function buildPairScores(useHistory){

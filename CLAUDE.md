@@ -92,6 +92,7 @@ Sparas **vid blur** (när man lämnar fältet), inte vid varje tangenttryckning.
 | `hhc-drive-consent` | Flagga för Drive-samtycke | — |
 | `hhc-group-history` | Snapshots av genererade grupper (sparas vid träningskort) | 10 |
 | `hhc-hold-apart` | Spelarpar som ska hållas isär vid generering | — |
+| `hhc-settings-pwd` | SHA-256-hash av lösenord för Inställningar-fliken | — |
 
 Drive-token sparas i `sessionStorage` (försvinner när fliken stängs).
 
@@ -111,6 +112,8 @@ Drive-token sparas i `sessionStorage` (försvinner när fliken stängs).
 - Toggle "Använd positioner"
 
 ### Inställningar (separat flik)
+Skyddas av lösenord (SHA-256, `hhc-settings-pwd`). Lösenord väljs första gången fliken öppnas. Ingen återställning — glömt lösenord kräver manuell rensning av localStorage. Session-variabel `_settingsUnlocked` återställs vid sidladdning.
+- **Generella inställningar** — "Använd positioner"-toggle (tidigare i Trupp-fliken). Renderas dynamiskt, `#usePositionsToggle` finns bara när inställningar är upplåsta.
 - **Grupphistorik** — lista över de 10 senaste träningskorten (sparas när träningskortet visas). Radera enskilda poster eller rensa all historik.
 - **Håll isär** — spelarpar som algoritmen försöker separera vid gruppgenerering. Om separation ej möjlig pga nivåbalans → garanterat samma färg (samma lag). Alltid aktivt, oberoende av historik-checkbox.
 
