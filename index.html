@@ -1714,24 +1714,33 @@ function clearGroups(){
 // ── Long-press action sheet (mobil) ──────────────────────────────────
 let _pressTimer=null;
 let _pressEl=null;
+let _pressStartX=0,_pressStartY=0;
 
 function _isTouch(){return('ontouchstart' in window)||navigator.maxTouchPoints>0;}
 
 function startLongPress(e,pid,fromGi,fromZone){
-  // Only activate on touch devices
   if(!_isTouch())return;
   cancelLongPress();
   _pressEl=e.currentTarget;
   _pressEl.classList.add('press-active');
+  const t=e.touches[0];
+  _pressStartX=t.clientX;_pressStartY=t.clientY;
   _pressTimer=setTimeout(()=>{
     _pressEl.classList.remove('press-active');
     openActionSheet(pid,fromGi,fromZone);
   },500);
 }
+function moveLongPress(e){
+  if(!_pressTimer)return;
+  const t=e.touches[0];
+  const dx=t.clientX-_pressStartX,dy=t.clientY-_pressStartY;
+  if(dx*dx+dy*dy>64)cancelLongPress(); // avbryt om >8px rörelse
+}
 function cancelLongPress(){
   if(_pressTimer){clearTimeout(_pressTimer);_pressTimer=null;}
   if(_pressEl){_pressEl.classList.remove('press-active');_pressEl=null;}
 }
+document.addEventListener('touchmove',moveLongPress,{passive:true});
 
 function openActionSheet(pid,fromGi,fromZone){
   const player=findPlayer(pid)||players.find(p=>String(p.id)===String(pid));
