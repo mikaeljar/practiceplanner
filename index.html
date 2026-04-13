@@ -3095,11 +3095,21 @@ function addGuest(){
   const level=pos==='goalie'?'b':document.getElementById('guestLevel').value;
   const guest={id:uid(),name,number:'',level,attendance:'yes',position:pos,status:'active',guest:true};
   players.push(guest);
+  // Om grupper redan finns — lägg målvakt i målvaktszonen, annars i poolen
+  if(groups.length){
+    if(pos==='goalie'){
+      if(!goaliesInGroup.includes(guest.id))goaliesInGroup.push(guest.id);
+    } else {
+      if(!poolPlayers.some(p=>String(p.id)===String(guest.id)))poolPlayers.push(guest);
+      document.getElementById('unassignedPool').style.display='block';
+    }
+  }
   document.getElementById('guestName').value='';
   if(document.getElementById('guestPosition'))document.getElementById('guestPosition').value='';
   if(document.getElementById('guestGoalie'))document.getElementById('guestGoalie').checked=false;
   toggleGuestForm(false);
   save();renderAll();renderAttendance();
+  if(groups.length){renderGroups();renderGoaliePanel();}
 }
 function removeGuest(id){
   players=players.filter(p=>String(p.id)!==String(id));
