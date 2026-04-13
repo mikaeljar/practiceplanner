@@ -3760,7 +3760,7 @@ function saveGroupHistorySnapshot(){
   const snapshot={
     date:document.getElementById('practiceDate')?.value||new Date().toISOString().slice(0,10),
     savedAt:new Date().toISOString(),
-    groups:groups.map(g=>({colour:g.colour,players:g.players.map(p=>p.name)}))
+    groups:groups.map(g=>({colour:g.colour,colour2:g.colour2,players:g.players.map(p=>({name:p.name,jerseyColour:p.jerseyColour||g.colour}))}))
   };
   history.unshift(snapshot);
   if(history.length>10)history.length=10;
@@ -3819,11 +3819,21 @@ function renderSettingsTab(){
 
   const historyHTML=history.length
     ?history.map((snap,i)=>{
-      const detailRows=snap.groups.map(g=>`
-        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
-          <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${esc(g.colour)};flex-shrink:0;margin-top:2px;"></span>
-          <span style="font-size:12px;color:var(--text);font-family:'Helvetica Neue',sans-serif;line-height:1.5;">${g.players.map(n=>esc(n)).join(', ')}</span>
-        </div>`).join('');
+      // Stöd både nytt format {name,jerseyColour} och gammalt format (sträng)
+      const detailRows=snap.groups.map(g=>{
+        const byColour={};
+        g.players.forEach(p=>{
+          const name=typeof p==='string'?p:p.name;
+          const col=typeof p==='string'?g.colour:p.jerseyColour;
+          if(!byColour[col])byColour[col]=[];
+          byColour[col].push(name);
+        });
+        return Object.entries(byColour).map(([col,names])=>`
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${esc(col)};flex-shrink:0;margin-top:2px;"></span>
+            <span style="font-size:12px;color:var(--text);font-family:'Helvetica Neue',sans-serif;line-height:1.5;">${names.map(n=>esc(n)).join(', ')}</span>
+          </div>`).join('');
+      }).join('<div style="height:6px;"></div>');
       return `
       <div style="border-bottom:1px solid var(--border);">
         <div class="roster-item" style="padding:8px 4px;">
