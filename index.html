@@ -2575,9 +2575,12 @@ function driveListHTML(files,nameFn,clickFn,containerId,page=0,pageSize=10){
     const d=new Date(f.modifiedTime);
     const ds=d.toLocaleDateString('sv-SE',{day:'numeric',month:'short',year:'numeric'});
     const displayName=nameFn(f.name);
-    return `<div class="drive-file-item" style="flex-direction:column;align-items:stretch;gap:4px;">
-      <span class="drive-file-name" style="cursor:pointer;font-weight:500;" onclick="${clickFn}('${f.id}')">${esc(displayName)}</span>
-      <span class="drive-file-date">${ds}</span>
+    return `<div class="drive-file-item" style="flex-direction:row;align-items:center;gap:6px;">
+      <div style="flex:1;min-width:0;cursor:pointer;" onclick="${clickFn}('${f.id}')">
+        <div class="drive-file-name" style="font-weight:500;">${esc(displayName)}</div>
+        <div class="drive-file-date">${ds}</div>
+      </div>
+      <button class="btn sm danger" onclick="driveDeleteFile('${f.id}','${containerId}')" title="Ta bort från Drive" style="flex-shrink:0;">${ICO.cross}</button>
     </div>`;
   }).join('');
   html+=`</div>`;
@@ -3466,6 +3469,22 @@ async function driveLoadFile(fileId){
   const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
     {headers:{Authorization:'Bearer '+driveAccessToken}});
   return await r.json();
+}
+
+async function driveDeleteFile(fileId,containerId){
+  if(!confirm('Ta bort filen från Google Drive?'))return;
+  try{
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`,
+      {method:'PATCH',headers:{Authorization:'Bearer '+driveAccessToken,'Content-Type':'application/json'},body:JSON.stringify({trashed:true})});
+    // Remove from cache and re-render
+    if(_driveCache[containerId]){
+      _driveCache[containerId]=_driveCache[containerId].filter(f=>f.id!==fileId);
+      const cfg=_drivePageConfig[containerId];
+      const el=document.getElementById(containerId);
+      if(el&&cfg)el.innerHTML=driveListHTML(_driveCache[containerId],cfg.nameFn,cfg.clickFn,containerId,0,cfg.pageSize);
+    }
+    showBanner('Fil borttagen från Drive','var(--on-bg)','var(--on-txt)');
+  }catch(e){showBanner('Kunde inte ta bort filen: '+e.message,'var(--danger-bg)','var(--danger-txt)');}
 }
 
 // ── Drive UI ──────────────────────────────────────────────────────────
