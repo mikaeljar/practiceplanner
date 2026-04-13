@@ -67,23 +67,6 @@ html[data-theme="dark"]{
   --danger-txt:#f09595;--danger-bg:#50131320;
   --warn-bg:#41240220;--warn-txt:#fac775;
 }
-html[data-theme="light"]{
-  --bg:#f5f4f0;--surface:#fff;--surface2:#f0eeea;
-  --border:rgba(0,0,0,0.1);--border-strong:rgba(0,0,0,0.18);
-  --text:#1a1a18;--text-muted:#6b6a65;--text-faint:#9c9b96;
-  --accent:#1a3a5c;--accent-light:#e6f1fb;--accent-text:#0c447c;
-  --a-bg:#eaf3de;--a-txt:#27500a;
-  --b-bg:#faeeda;--b-txt:#633806;
-  --c-bg:#e6f1fb;--c-txt:#0c447c;
-  --d-bg:#fbeaf0;--d-txt:#72243e;
-  --e-bg:#e1f5ee;--e-txt:#085041;
-  --goalie-bg:#f3eefe;--goalie-txt:#3c2a7a;
-  --coach-bg:#fef3e2;--coach-txt:#7a4a00;
-  --on-bg:#eaf3de;--on-txt:#3b6d11;
-  --off-bg:#fcebeb;--off-txt:#a32d2d;
-  --danger-txt:#a32d2d;--danger-bg:#fcebeb;
-  --warn-bg:#fdf3e0;--warn-txt:#845008;
-}
 body{font-family:'Georgia','Times New Roman',serif;background:var(--bg);color:var(--text);min-height:100vh;}
 header{background:var(--accent);color:#fff;padding:0.65rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;}
 .header-left{display:flex;align-items:center;gap:10px;}
@@ -889,6 +872,11 @@ function levelLabel(l){return l==='goalie'?'MV':l.toUpperCase();}
 function coachTypeLabel(t){return t==='off-ice'?'Off-ice':t==='goalie-coach'?'Målvaktstränare':'Isledare';}
 function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
 function interleave(arrays){const r=[];const m=Math.max(0,...arrays.map(a=>a.length));for(let i=0;i<m;i++)for(const a of arrays)if(i<a.length)r.push(a[i]);return r;}
+const VALID_LEVELS=['a','b','c','d','e','goalie'];
+function normalizePlayer(p){const ig=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:ig?'b':p.level,attendance:p.attendance||'unknown',position:ig?'goalie':(p.position||null),status:p.status||'active',guest:p.guest||false};}
+function normalizeCoach(c){return{id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'};}
+function debounce(fn,ms){let t;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),ms);};}
+const scheduleSave=debounce(save,250);
 
 // ── Träningsbild ──────────────────────────────────────────────────────
 function practiceImageSelected(e){
@@ -941,7 +929,7 @@ function save(){
       if(practiceImageData)localStorage.setItem(STORAGE_KEY+'_img',practiceImageData);
       else localStorage.removeItem(STORAGE_KEY+'_img');
     }catch(imgErr){/* image too large for localStorage — silently skip */}
-  }catch(e){}
+  }catch(e){console.error('save() failed:',e);}
 }
 function loadFromStorage(){
   try{
@@ -949,8 +937,8 @@ function loadFromStorage(){
     if(!raw)return false;
     const d=JSON.parse(raw);
     // Players & coaches — give fresh IDs on every load
-    if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','d','e','goalie'].includes(p.level)).map(p=>{const isLegacyGoalie=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:isLegacyGoalie?'b':p.level,attendance:p.attendance||'unknown',position:isLegacyGoalie?'goalie':(p.position||null),status:p.status||'active',guest:p.guest||false};});
-    if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
+    if(d.players)players=d.players.filter(p=>p.name&&VALID_LEVELS.includes(p.level)).map(normalizePlayer);
+    if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(normalizeCoach);
     if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
     if(typeof d.groupUsePositions==='boolean'){try{const el=document.getElementById('groupUsePositions');if(el)el.checked=d.groupUsePositions;}catch(e){}}
     if(d.groupSize){try{const el=document.getElementById('groupSize');if(el)el.value=d.groupSize;}catch(e){}}
@@ -1061,7 +1049,7 @@ function setAtt(type,id,val){
   if(!item)return;
   const prevAtt=item.attendance;
   item.attendance=item.attendance===val?'unknown':val;
-  save();renderStats();
+  scheduleSave();renderStats();
   // Update only the affected row instead of re-rendering entire list
   if(currentSub==='attendance'){
     // Update toggle buttons for this item
@@ -2157,11 +2145,13 @@ function jerseyBtnClick(e){
   if(p){p.jerseyColour=(p.jerseyColour===g.colour)?g.colour2:g.colour;save();renderGroups();}
 }
 
-function onDragEnd(e){e.target.classList.remove('dragging');document.querySelectorAll('.group-card').forEach(c=>c.classList.remove('drag-over'));}
-function onDragOver(e,gi){e.preventDefault();document.querySelectorAll('.group-card').forEach(c=>c.classList.remove('drag-over'));const card=document.getElementById('gc-'+gi);if(card)card.classList.add('drag-over');}
-function onDragLeave(e,gi){const card=document.getElementById('gc-'+gi);if(card)card.classList.remove('drag-over');}
+let _dragOverCard=null;
+function clearDragOver(){if(_dragOverCard){_dragOverCard.classList.remove('drag-over');_dragOverCard=null;}}
+function onDragEnd(e){e.target.classList.remove('dragging');clearDragOver();}
+function onDragOver(e,gi){e.preventDefault();clearDragOver();const card=document.getElementById('gc-'+gi);if(card){card.classList.add('drag-over');_dragOverCard=card;}}
+function onDragLeave(e,gi){clearDragOver();}
 function onDrop(e,toGi){
-  e.preventDefault();document.querySelectorAll('.group-card').forEach(c=>c.classList.remove('drag-over'));
+  e.preventDefault();clearDragOver();
   if(dragPlayerId===null)return;
   const player=findPlayer(dragPlayerId)||players.find(p=>String(p.id)===dragPlayerId);
   if(!player)return;
@@ -2427,8 +2417,8 @@ function loadPracticeFromFile(evt){
       const d=JSON.parse(e.target.result);
       if(!d.version||d.version<5){alert('Felaktigt filformat. Spara träningen på nytt med den nya versionen.');return;}
       // Restore players & coaches
-      if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','d','e','goalie'].includes(p.level)).map(p=>{const isLegacyGoalie=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:isLegacyGoalie?'b':p.level,attendance:p.attendance||'unknown',position:isLegacyGoalie?'goalie':(p.position||null),status:p.status||'active',guest:p.guest||false};});
-      if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
+      if(d.players)players=d.players.filter(p=>p.name&&VALID_LEVELS.includes(p.level)).map(normalizePlayer);
+      if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(normalizeCoach);
       if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
       if(typeof d.groupUsePositions==='boolean'){try{const el=document.getElementById('groupUsePositions');if(el)el.checked=d.groupUsePositions;}catch(e){}}
       if(d.groupSize){try{const el=document.getElementById('groupSize');if(el)el.value=d.groupSize;}catch(e){}}
@@ -2628,23 +2618,23 @@ function deleteTraningItem(index){
   const list=JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
   list.splice(index,1);
   localStorage.setItem(TRANING_STORAGE_KEY,JSON.stringify(list));
-  loadTraningInit();
+  loadTraningInit(list);
 }
 function deleteRosterItem(index){
   const list=JSON.parse(localStorage.getItem(ROSTER_STORAGE_KEY)||'[]');
   list.splice(index,1);
   localStorage.setItem(ROSTER_STORAGE_KEY,JSON.stringify(list));
-  loadRosterInit();
+  loadRosterInit(list);
 }
 function deleteUpplaggItem(index){
   const list=JSON.parse(localStorage.getItem(UPPLAGG_STORAGE_KEY)||'[]');
   list.splice(index,1);
   localStorage.setItem(UPPLAGG_STORAGE_KEY,JSON.stringify(list));
-  loadUpplagg();
+  loadUpplagg(list);
 }
 
-async function loadTraningInit(){
-  const list=JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
+async function loadTraningInit(cachedList){
+  const list=cachedList||JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
   let html='';
   if(list.length){
     html+=`<div class="drive-section-title" style="margin-top:0;">Lokalt sparade</div><div class="drive-file-list">`;
@@ -2699,9 +2689,8 @@ async function applyTraningDrive(fileId){
 
 function loadPracticeData(d,name){
   if(!d.version||d.version<5){showBanner('Felaktigt filformat','var(--warn-bg)','var(--warn-txt)');return;}
-  if(d.players)players=d.players.filter(p=>p.name&&['a','b','c','d','e','goalie'].includes(p.level))
-    .map(p=>{const ig=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:ig?'b':p.level,attendance:p.attendance||'unknown',position:ig?'goalie':(p.position||null)};});
-  if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
+  if(d.players)players=d.players.filter(p=>p.name&&VALID_LEVELS.includes(p.level)).map(normalizePlayer);
+  if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(normalizeCoach);
   if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
   if(d.numStations){numStations=d.numStations;stations=makeStations();}
   if(d.stations){
@@ -2784,8 +2773,8 @@ function saveRosterDevice(){
   showBanner('Trupp nedladdad: '+safe+'.json','var(--on-bg)','var(--on-txt)');
 }
 
-async function loadRosterInit(){
-  const list=JSON.parse(localStorage.getItem(ROSTER_STORAGE_KEY)||'[]');
+async function loadRosterInit(cachedList){
+  const list=cachedList||JSON.parse(localStorage.getItem(ROSTER_STORAGE_KEY)||'[]');
   let html='';
   if(list.length){
     html+=`<div class="drive-section-title" style="margin-top:0;">Lokalt sparade</div><div class="drive-file-list">`;
@@ -2906,8 +2895,8 @@ async function saveUpplaggDrive(){
   }
 }
 
-async function loadUpplagg(){
-  const list=JSON.parse(localStorage.getItem(UPPLAGG_STORAGE_KEY)||'[]');
+async function loadUpplagg(cachedList){
+  const list=cachedList||JSON.parse(localStorage.getItem(UPPLAGG_STORAGE_KEY)||'[]');
   let html='';
   if(list.length){
     html+=`<div class="drive-section-title" style="margin-top:0;">Lokalt sparade</div>`;
@@ -3054,10 +3043,8 @@ function importRoster(evt){
   reader.onload=e=>{
     try{
       const d=JSON.parse(e.target.result);
-      const newP=(d.players||[]).filter(p=>p.name&&['a','b','c','d','e','goalie'].includes(p.level))
-        .map(p=>{const isLegacyGoalie=p.level==='goalie';return{id:uid(),name:p.name,number:p.number||'',level:isLegacyGoalie?'b':p.level,attendance:p.attendance||'unknown',position:isLegacyGoalie?'goalie':(p.position||null),status:p.status||'active',guest:p.guest||false};});
-      const newC=(d.coaches||[]).filter(c=>c.name)
-        .map(c=>({id:uid(),name:c.name,coachType:c.coachType||'on-ice',attendance:c.attendance||'unknown'}));
+      const newP=(d.players||[]).filter(p=>p.name&&VALID_LEVELS.includes(p.level)).map(normalizePlayer);
+      const newC=(d.coaches||[]).filter(c=>c.name).map(normalizeCoach);
       if(!newP.length&&!newC.length){alert('Inga giltiga data hittades.');return;}
       closeModal('loadRosterModal');
       loadRosterConfirm(newP,newC,file.name,(action)=>{
@@ -3638,14 +3625,6 @@ async function driveLoadRoster(fileId,filename){
   }
 }
 
-document.getElementById('driveModal').addEventListener('click',function(e){if(e.target===this)closeModal('driveModal');});
-document.getElementById('loadRosterConfirmModal').addEventListener('click',function(e){if(e.target===this)closeModal('loadRosterConfirmModal');});
-document.getElementById('saveUpplaggModal').addEventListener('click',function(e){if(e.target===this)closeModal('saveUpplaggModal');});
-document.getElementById('loadUpplaggModal').addEventListener('click',function(e){if(e.target===this)closeModal('loadUpplaggModal');});
-document.getElementById('saveTraningModal').addEventListener('click',function(e){if(e.target===this)closeModal('saveTraningModal');});
-document.getElementById('loadTraningModal').addEventListener('click',function(e){if(e.target===this)closeModal('loadTraningModal');});
-document.getElementById('saveRosterModal').addEventListener('click',function(e){if(e.target===this)closeModal('saveRosterModal');});
-document.getElementById('loadRosterModal').addEventListener('click',function(e){if(e.target===this)closeModal('loadRosterModal');});
 
 // ── PWA Service Worker (offline-stöd) ────────────────────────────────
 if('serviceWorker' in navigator){
@@ -3671,7 +3650,7 @@ if('serviceWorker' in navigator){
           return fetch(e.request).then(response=>{
             if(!response||response.status!==200||response.type==='opaque')return response;
             const clone=response.clone();
-            caches.open(CACHE).then(c=>c.put(e.request,clone));
+            caches.open(CACHE).then(c=>c.put(e.request,clone)).catch(()=>{});
             return response;
           }).catch(()=>caches.match(e.request));
         })
