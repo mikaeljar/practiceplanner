@@ -3777,6 +3777,7 @@ function toggleHistoryDetail(index){
 }
 
 function deleteGroupHistoryItem(index){
+  if(!confirm('Ta bort denna historikpost?'))return;
   const history=getGroupHistory();
   history.splice(index,1);
   try{localStorage.setItem(GROUP_HISTORY_KEY,JSON.stringify(history));}catch(e){}
@@ -3820,7 +3821,7 @@ function renderSettingsTab(){
   const historyHTML=history.length
     ?history.map((snap,i)=>{
       // Stöd både nytt format {name,jerseyColour} och gammalt format (sträng)
-      const detailRows=snap.groups.map(g=>{
+      const detailRows=snap.groups.map((g,gi)=>{
         const byColour={};
         g.players.forEach(p=>{
           const name=typeof p==='string'?p:p.name;
@@ -3828,12 +3829,17 @@ function renderSettingsTab(){
           if(!byColour[col])byColour[col]=[];
           byColour[col].push(name);
         });
-        return Object.entries(byColour).map(([col,names])=>`
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
+        const colorRows=Object.entries(byColour).map(([col,names])=>`
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;">
             <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${esc(col)};flex-shrink:0;margin-top:2px;"></span>
             <span style="font-size:12px;color:var(--text);font-family:'Helvetica Neue',sans-serif;line-height:1.5;">${names.map(n=>esc(n)).join(', ')}</span>
           </div>`).join('');
-      }).join('<div style="height:6px;"></div>');
+        return `
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;font-family:'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:5px;">Grupp ${gi+1}</div>
+            ${colorRows}
+          </div>`;
+      }).join('');
       return `
       <div style="border-bottom:1px solid var(--border);">
         <div class="roster-item" style="padding:8px 4px;">
