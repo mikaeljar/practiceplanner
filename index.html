@@ -926,7 +926,7 @@ function save(){
     // Store groups/goalies/pool by player NAME (not ID) so they survive reload
     const coachNameById=id=>coaches.find(c=>String(c.id)===String(id))?.name||null;
     const data={
-      players:players.map(({name,number,level,attendance,position,status,guest})=>({name,number,level,attendance,position:position||null,status:status||'active',guest:guest||false})),
+      players:players.map(p=>({name:p.name,number:p.number||'',level:p.level,attendance:p.attendance,position:p.position||null,practicePosition:p.practicePosition||null,status:p.status||'active',guest:p.guest||false})),
       coaches:coaches.map(({name,coachType,attendance})=>({name,coachType,attendance})),
       numStations,
       usePositions,
@@ -958,7 +958,8 @@ function loadFromStorage(){
     if(!raw)return false;
     const d=JSON.parse(raw);
     // Players & coaches — give fresh IDs on every load
-    if(d.players)players=d.players.filter(p=>p.name&&VALID_LEVELS.includes(p.level)).map(normalizePlayer);
+    if(d.players){players=d.players.filter(p=>p.name&&VALID_LEVELS.includes(p.level)).map(normalizePlayer);
+      d.players.forEach(dp=>{const p=players.find(pl=>pl.name===dp.name);if(p&&dp.practicePosition!==undefined)p.practicePosition=dp.practicePosition||null;});}
     if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(normalizeCoach);
     if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
     if(typeof d.groupUsePositions==='boolean'){try{const el=document.getElementById('groupUsePositions');if(el)el.checked=d.groupUsePositions;}catch(e){}}
@@ -1248,6 +1249,9 @@ function onDropGoalie(e){
 }
 
 function posLabel(pos){return pos==='forward'?'FW':pos==='center'?'C':pos==='back'?'B':pos==='goalie'?'MV':'—';}
+// Returns the effective position for a player in the current practice context.
+// practicePosition overrides roster position for field players; goalie is always from roster.
+function effPos(p){return(p.position==='goalie')?'goalie':(p.practicePosition!==undefined&&p.practicePosition!==null?p.practicePosition:p.position);}
 function posOrder(pos){return pos==='forward'?0:pos==='center'?1:pos==='back'?2:3;}
 function toggleUsePositions(){
   usePositions=document.getElementById('usePositionsToggle').checked;
@@ -1523,13 +1527,13 @@ function generateGroups(){
   if(posMode){
     // Position-aware grouping
     // Players without position go straight to fallback pool
-    const withPos=fieldIn.filter(p=>p.position);
-    const noPos=fieldIn.filter(p=>!p.position);
+    const withPos=fieldIn.filter(p=>effPos(p)&&effPos(p)!=='goalie');
+    const noPos=fieldIn.filter(p=>!effPos(p)||effPos(p)==='goalie');
 
     // Shuffle each position pool
-    const forwards=shuffle(withPos.filter(p=>p.position==='forward'));
-    const centers=shuffle(withPos.filter(p=>p.position==='center'));
-    const backs=shuffle(withPos.filter(p=>p.position==='back'));
+    const forwards=shuffle(withPos.filter(p=>effPos(p)==='forward'));
+    const centers=shuffle(withPos.filter(p=>effPos(p)==='center'));
+    const backs=shuffle(withPos.filter(p=>effPos(p)==='back'));
 
     const numGroups=Math.max(1,Math.floor(fieldIn.length/size));
 
@@ -2013,7 +2017,7 @@ function renderGroups(){
                 title="${g.fullColour?'Full colour mode':'Click to switch jersey'}"
                 data-pid="${p.id}" data-gi="${gi}"
                 onclick="jerseyBtnClick(event)"></button>
-              ${usePositions&&p.position!=='goalie'?`<button class="badge pos${!p.position?' null-pos':''}" style="cursor:pointer;border:none;" title="Klicka för att ändra position" onclick="togglePlayerPosition(${gi},'${p.id}')">${posLabel(p.position)}</button>`:''}
+              ${usePositions&&p.position!=='goalie'?`<button class="badge pos${!effPos(p)?' null-pos':''}" style="cursor:pointer;border:none;" title="Klicka för att ändra position" onclick="togglePlayerPosition(${gi},'${p.id}')">${posLabel(effPos(p))}</button>`:''}
               <span class="gp-name${p.attendance==='no'?' absent':''}">${esc(p.name)}</span>
               ${p.number?`<span class="gp-num">#${esc(p.number)}</span>`:''}
               ${p.attendance==='no'?`<svg class="absent-icon" viewBox="0 0 14 14" fill="none" title="Markerad som borta"><path d="M7 2.5L12 11H2L7 2.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 6v2.5M7 10h.01" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`:''}
@@ -2052,7 +2056,7 @@ function renderPool(){
     ondragstart="poolDragStart(event)" ondragend="onDragEnd(event)"
     ontouchstart="startLongPress(event,'${p.id}',null,'pool')" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()">
     ${p.position!=='goalie'?`<span class="badge ${p.level}" style="padding:1px 5px">${p.level.toUpperCase()}</span>`:''}
-    <span class="badge ${p.position==='goalie'?'goalie':'pos'}${!p.position&&p.position!=='goalie'?' null-pos':''}" style="padding:1px 5px">${posLabel(p.position)}</span>
+    <span class="badge ${p.position==='goalie'?'goalie':'pos'}${!effPos(p)&&p.position!=='goalie'?' null-pos':''}" style="padding:1px 5px">${posLabel(effPos(p))}</span>
     ${esc(p.name)}
   </div>`).join('');
 }
@@ -2111,16 +2115,16 @@ function togglePlayerPosition(gi,pid){
   const p=g.players.find(pl=>String(pl.id)===String(pid));
   if(!p)return;
   const cycle={forward:'center',center:'back',back:'forward',null:'forward'};
-  p.position=cycle[p.position||'null'];
+  p.practicePosition=cycle[effPos(p)||'null'];
   save();renderGroups();
 }
 
 // Returns players sorted by position order for display (FW, C, FW, B, B)
 function sortedGroupPlayersByPosition(g){
-  const fw=g.players.filter(p=>p.position==='forward');
-  const c=g.players.filter(p=>p.position==='center');
-  const b=g.players.filter(p=>p.position==='back');
-  const none=g.players.filter(p=>!p.position);
+  const fw=g.players.filter(p=>effPos(p)==='forward');
+  const c=g.players.filter(p=>effPos(p)==='center');
+  const b=g.players.filter(p=>effPos(p)==='back');
+  const none=g.players.filter(p=>!effPos(p)||effPos(p)==='goalie');
   // Interleave: FW, C, FW, B, B pattern
   const result=[];
   const maxLen=Math.max(fw.length,c.length,b.length);
@@ -2368,7 +2372,7 @@ function nyTraningRensa(){
   closeModal('nyTraningModal');
   // Reset attendance → unknown (except injured/longterm → no), remove guests
   players=players.filter(p=>!p.guest);
-  players.forEach(p=>p.attendance=(p.status==='injured'||p.status==='longterm')?'no':'unknown');
+  players.forEach(p=>{p.attendance=(p.status==='injured'||p.status==='longterm')?'no':'unknown';p.practicePosition=null;});
   coaches.forEach(c=>c.attendance='unknown');
   // Clear groups
   groups=[];poolPlayers=[];goaliesInGroup=[];
@@ -2459,65 +2463,7 @@ function loadPracticeFromFile(evt){
   reader.onload=e=>{
     try{
       const d=JSON.parse(e.target.result);
-      if(!d.version||d.version<5){alert('Felaktigt filformat. Spara träningen på nytt med den nya versionen.');return;}
-      // Restore players & coaches
-      if(d.players)players=d.players.filter(p=>p.name&&VALID_LEVELS.includes(p.level)).map(normalizePlayer);
-      if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(normalizeCoach);
-      if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
-      if(typeof d.groupUsePositions==='boolean'){try{const el=document.getElementById('groupUsePositions');if(el)el.checked=d.groupUsePositions;}catch(e){}}
-      if(d.groupSize){try{const el=document.getElementById('groupSize');if(el)el.value=d.groupSize;}catch(e){}}
-      // Restore stations
-      if(d.numStations){numStations=d.numStations;stations=makeStations();}
-      if(d.stations){
-        const coachIdByName=name=>coaches.find(c=>c.name===name)?.id||null;
-        d.stations.forEach((ds,i)=>{
-          if(!stations[i])return;
-          stations[i].drill=ds.drill||'';
-          // Support both new (coachNames) and old (coaches=[ids]) format
-          if(ds.coachNames&&ds.coachNames.length){
-            stations[i].coaches=ds.coachNames.map(n=>coachIdByName(n)).filter(Boolean).map(String);
-          } else if(ds.coaches&&ds.coaches.length){
-            // Old format: try to resolve by name fallback — will be empty if IDs don't match
-            stations[i].coaches=[];
-          }
-        });
-      }
-      // Restore date
-      if(d.practiceDate){try{document.getElementById('practiceDate').value=d.practiceDate;}catch(ex){}}
-      // Restore groups (by name match since IDs differ)
-      if(d.groups&&d.groups.length){
-        groups=d.groups.map(sg=>{
-          const gPlayers=sg.players.map(sp=>{
-            const p=players.find(pl=>pl.name===sp.name)||{id:uid(),name:sp.name,number:sp.number||'',level:sp.level||'b',attendance:'yes'};
-            p.jerseyColour=sp.jerseyColour;
-            return p;
-          });
-          return{colour:sg.colour,colour2:sg.colour2,fullColour:sg.fullColour,players:gPlayers};
-        });
-        // Restore goalies and pool by name
-        goaliesInGroup=(d.goaliesInGroup||[]).map(name=>players.find(p=>p.name===name)?.id).filter(Boolean);
-        poolPlayers=(d.poolPlayers||[]).map(name=>players.find(p=>p.name===name)).filter(Boolean);
-      }
-      // Restore practice image
-      if(d.practiceImageData){
-        practiceImageData=d.practiceImageData;
-        try{
-          document.getElementById('practiceImageEl').src=practiceImageData;
-          document.getElementById('practiceImagePreview').style.display='block';
-        }catch(ex){}
-      } else {
-        clearPracticeImage();
-      }
-      save();renderAll();
-      if(groups.length){
-        document.getElementById('textOutputBtn').disabled=false;
-        document.getElementById('cardOutputBtn').disabled=false;
-        const addGroupBtn=document.getElementById('addGroupBtn');
-        if(addGroupBtn)addGroupBtn.style.display='';
-        renderGroups();renderGoaliePanel();
-      }
-      renderStationer();
-      showBanner('Träning laddad: '+d.practiceDate,'var(--on-bg)','var(--on-txt)');
+      loadPracticeData(d,d.practiceDate||'fil');
     }catch(ex){console.error(ex);alert('Kunde inte läsa filen: '+ex.message);}
   };
   reader.readAsText(file);evt.target.value='';
@@ -2532,7 +2478,7 @@ function getTraningData(){
     version:5, savedAt:new Date().toISOString(), practiceDate, numStations, usePositions,
     stations:stations.map(({label,drill,coaches:sc,fixed})=>({label,drill,fixed,
       coachNames:sc.map(id=>coaches.find(c=>String(c.id)===String(id))?.name||null).filter(Boolean)})),
-    players:players.map(({name,number,level,attendance,position,status,guest})=>({name,number,level,attendance,position:position||null,status:status||'active',guest:guest||false})),
+    players:players.map(p=>({name:p.name,number:p.number||'',level:p.level,attendance:p.attendance,position:effPos(p)||null,status:p.status||'active',guest:p.guest||false})),
     coaches:coaches.map(({name,coachType,attendance})=>({name,coachType,attendance})),
     groups:groups.map(g=>({colour:g.colour,colour2:g.colour2,fullColour:g.fullColour,
       players:g.players.map(p=>({name:p.name,number:p.number||'',level:p.level,jerseyColour:p.jerseyColour}))})),
@@ -2733,8 +2679,30 @@ async function applyTraningDrive(fileId){
 
 function loadPracticeData(d,name){
   if(!d.version||d.version<5){showBanner('Felaktigt filformat','var(--warn-bg)','var(--warn-txt)');return;}
-  if(d.players)players=d.players.filter(p=>p.name&&VALID_LEVELS.includes(p.level)).map(normalizePlayer);
-  if(d.coaches)coaches=d.coaches.filter(c=>c.name).map(normalizeCoach);
+  // Roster (level, number, position, status) is authoritative — only update attendance.
+  // Guests are transient and re-added from the practice.
+  if(d.players){
+    // Remove old guests, keep roster players
+    players=players.filter(p=>!p.guest);
+    // Reset attendance for all roster players
+    players.forEach(p=>p.attendance='unknown');
+    d.players.forEach(dp=>{
+      if(dp.guest&&dp.name){
+        players.push(normalizePlayer({...dp,id:undefined}));
+      } else {
+        const p=players.find(pl=>pl.name===dp.name);
+        if(p){
+          p.attendance=dp.attendance||'unknown';
+          // Restore practice-specific position override (never overwrites roster position)
+          if(p.position!=='goalie') p.practicePosition=dp.position||null;
+        }
+      }
+    });
+  }
+  if(d.coaches){
+    coaches.forEach(c=>c.attendance='unknown');
+    d.coaches.forEach(dc=>{const c=coaches.find(cc=>cc.name===dc.name);if(c)c.attendance=dc.attendance||'unknown';});
+  }
   if(typeof d.usePositions==='boolean')usePositions=d.usePositions;
   if(d.numStations){numStations=d.numStations;stations=makeStations();}
   if(d.stations){
