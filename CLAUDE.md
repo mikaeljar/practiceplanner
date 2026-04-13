@@ -90,6 +90,8 @@ Sparas **vid blur** (när man lämnar fältet), inte vid varje tangenttryckning.
 | `hhc-drive-folder-id` | Google Drive mapp-ID | — |
 | `hhc-theme` | `'dark'`\|`'light'` | — |
 | `hhc-drive-consent` | Flagga för Drive-samtycke | — |
+| `hhc-group-history` | Snapshots av genererade grupper (sparas vid träningskort) | 10 |
+| `hhc-hold-apart` | Spelarpar som ska hållas isär vid generering | — |
 
 Drive-token sparas i `sessionStorage` (försvinner när fliken stängs).
 
@@ -100,13 +102,17 @@ Drive-token sparas i `sessionStorage` (försvinner när fliken stängs).
 ### Planera träning (huvudflik)
 - **Närvaro** — markera Ja/Nej/Okänd per spelare och ledare. "+ Lägg till gäst"-knapp under sammanfattningsraden.
 - **Upplägg** — träningsbild + stationer med övningshistorik och ledarstilldelning
-- **Grupper** — generera grupper, drag & drop, målvaktszon, otilldelad pool
+- **Grupper** — generera grupper, drag & drop, målvaktszon, otilldelad pool. Checkbox **"Använd historik"** viktar par som ofta hamnat ihop negativt (60 swap-försök, nivåbalans prioriteras). **Håll isär**-par är alltid aktiva (vikt 1000).
 
 ### Trupp (separat flik)
 - Kollapsabara "Lägg till"-formulär för spelare och ledare
 - Spara/Ladda/Rensa-band överst
 - Status per spelare: Aktiv / Skadad / Långtidsfrånv.
 - Toggle "Använd positioner"
+
+### Inställningar (separat flik)
+- **Grupphistorik** — lista över de 10 senaste träningskorten (sparas när träningskortet visas). Radera enskilda poster eller rensa all historik.
+- **Håll isär** — spelarpar som algoritmen försöker separera vid gruppgenerering. Om separation ej möjlig pga nivåbalans → garanterat samma färg (samma lag). Alltid aktivt, oberoende av historik-checkbox.
 
 ---
 

@@ -361,6 +361,7 @@ input:focus,select:focus{border-color:var(--accent);}
 <div class="top-tabs">
   <button class="top-tab active" onclick="switchTopTab('plan')">Planera träning</button>
   <button class="top-tab" onclick="switchTopTab('roster')">Trupp</button>
+  <button class="top-tab" onclick="switchTopTab('settings')">Inställningar</button>
 </div>
 <main>
 
@@ -492,6 +493,12 @@ input:focus,select:focus{border-color:var(--accent);}
               Ta hänsyn till position
             </label>
           </div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="groupUseHistory" style="width:16px;height:16px;cursor:pointer;"/>
+              Använd historik
+            </label>
+          </div>
           <button class="btn primary" onclick="generateGroups()">Generera grupper</button>
         </div>
       </div>
@@ -561,6 +568,34 @@ input:focus,select:focus{border-color:var(--accent);}
       </div>
       <div id="stationRows"></div>
     </div>
+    </div>
+  </div>
+
+  <!-- INSTÄLLNINGAR -->
+  <div id="top-settings" style="display:none;">
+    <div class="panel" style="margin-bottom:1.5rem;">
+      <p class="panel-title">Grupphistorik</p>
+      <p style="font-size:13px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">Historik sparas automatiskt när du visar träningskortet. Max 10 träningar sparas.</p>
+      <div id="groupHistoryList"></div>
+      <div style="margin-top:1rem;">
+        <button class="btn sm danger" onclick="clearGroupHistory()">Rensa all historik</button>
+      </div>
+    </div>
+    <div class="panel">
+      <p class="panel-title">Håll isär</p>
+      <p style="font-size:13px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-bottom:1rem;">Spelare i samma par försöker placeras i olika grupper. Om det inte är möjligt placeras de med samma färg (samma lag).</p>
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
+        <div style="flex:1;min-width:120px;">
+          <div style="font-size:11px;font-family:'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:5px;">Spelare 1</div>
+          <select id="holdApartP1" style="width:100%;height:32px;font-size:13px;"><option value="">— Välj spelare —</option></select>
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <div style="font-size:11px;font-family:'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:5px;">Spelare 2</div>
+          <select id="holdApartP2" style="width:100%;height:32px;font-size:13px;"><option value="">— Välj spelare —</option></select>
+        </div>
+        <button class="btn sm primary" onclick="addHoldApartPair()">Lägg till</button>
+      </div>
+      <div id="holdApartList"></div>
     </div>
   </div>
 
@@ -1010,9 +1045,11 @@ function switchTopTab(t){
   currentTop=t;
   document.getElementById('top-plan').style.display=t==='plan'?'':'none';
   document.getElementById('top-roster').style.display=t==='roster'?'':'none';
+  document.getElementById('top-settings').style.display=t==='settings'?'':'none';
   document.getElementById('traningBand').style.display=t==='plan'?'':'none';
-  document.querySelectorAll('.top-tab').forEach((el,i)=>el.classList.toggle('active',['plan','roster'][i]===t));
+  document.querySelectorAll('.top-tab').forEach((el,i)=>el.classList.toggle('active',['plan','roster','settings'][i]===t));
   if(t==='plan'&&currentSub==='attendance')renderAttendance();
+  if(t==='settings')renderSettingsTab();
 }
 function switchSubTab(t){
   currentSub=t;
@@ -1602,6 +1639,16 @@ function generateGroups(){
       groups.push({players:grpPlayers,colour:COL1,colour2:COL2,fullColour:false});
     }
     if(method==='level')groups=shuffle(groups);
+  }
+
+  // Historik + håll isär — swap-pass
+  const useHistory=document.getElementById('groupUseHistory')?.checked||false;
+  const pairScores=buildPairScores(useHistory);
+  const hasScores=Object.keys(pairScores).length>0;
+  if(hasScores){
+    applyHistorySwaps(groups,pairScores);
+    reassignJerseyColors(groups);
+    applyHoldApartColors(groups);
   }
 
   document.getElementById('textOutputBtn').disabled=false;
@@ -2270,6 +2317,7 @@ function copyTextOutput(){
 }
 
 function showPracticeCard(){
+  saveGroupHistorySnapshot();
   const wrap=document.getElementById('practiceCardWrap');
   wrap.innerHTML=buildPracticeCardHTML();
   openModal('cardModal');
@@ -3642,6 +3690,179 @@ async function driveLoadRoster(fileId,filename){
   }
 }
 
+
+// ── Grupphistorik ─────────────────────────────────────────────────────
+const GROUP_HISTORY_KEY='hhc-group-history';
+const HOLD_APART_KEY='hhc-hold-apart';
+
+function getGroupHistory(){try{return JSON.parse(localStorage.getItem(GROUP_HISTORY_KEY)||'[]');}catch{return[];}}
+function getHoldApart(){try{return JSON.parse(localStorage.getItem(HOLD_APART_KEY)||'[]');}catch{return[];}}
+function saveHoldApart(list){try{localStorage.setItem(HOLD_APART_KEY,JSON.stringify(list));}catch(e){console.error('holdApart save failed:',e);}}
+
+function saveGroupHistorySnapshot(){
+  if(!groups.length)return;
+  const history=getGroupHistory();
+  const snapshot={
+    date:document.getElementById('practiceDate')?.value||new Date().toISOString().slice(0,10),
+    savedAt:new Date().toISOString(),
+    groups:groups.map(g=>({colour:g.colour,players:g.players.map(p=>p.name)}))
+  };
+  history.unshift(snapshot);
+  if(history.length>10)history.length=10;
+  try{localStorage.setItem(GROUP_HISTORY_KEY,JSON.stringify(history));}catch(e){console.error('Group history save failed:',e);}
+}
+
+function deleteGroupHistoryItem(index){
+  const history=getGroupHistory();
+  history.splice(index,1);
+  try{localStorage.setItem(GROUP_HISTORY_KEY,JSON.stringify(history));}catch(e){}
+  renderSettingsTab();
+}
+
+function clearGroupHistory(){
+  if(!confirm('Rensa all grupphistorik?'))return;
+  try{localStorage.removeItem(GROUP_HISTORY_KEY);}catch(e){}
+  renderSettingsTab();
+}
+
+function addHoldApartPair(){
+  const p1=document.getElementById('holdApartP1').value;
+  const p2=document.getElementById('holdApartP2').value;
+  if(!p1||!p2){showBanner('Välj två spelare','var(--warn-bg)','var(--warn-txt)');return;}
+  if(p1===p2){showBanner('Välj två olika spelare','var(--warn-bg)','var(--warn-txt)');return;}
+  const list=getHoldApart();
+  if(list.some(pair=>(pair.player1===p1&&pair.player2===p2)||(pair.player1===p2&&pair.player2===p1))){
+    showBanner('Paret finns redan','var(--warn-bg)','var(--warn-txt)');return;
+  }
+  list.push({player1:p1,player2:p2});
+  saveHoldApart(list);
+  renderSettingsTab();
+}
+
+function deleteHoldApartPair(index){
+  const list=getHoldApart();
+  list.splice(index,1);
+  saveHoldApart(list);
+  renderSettingsTab();
+}
+
+function renderSettingsTab(){
+  renderGroupHistoryUI();
+  renderHoldApartUI();
+}
+
+function renderGroupHistoryUI(){
+  const el=document.getElementById('groupHistoryList');
+  if(!el)return;
+  const history=getGroupHistory();
+  if(!history.length){
+    el.innerHTML='<div class="drive-empty">Ingen historik sparad ännu. Historik sparas när du visar träningskortet.</div>';
+    return;
+  }
+  el.innerHTML=history.map((snap,i)=>{
+    const summary=snap.groups.map(g=>`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${esc(g.colour)};margin-right:3px;vertical-align:middle;"></span>${g.players.length} sp.`).join('&ensp;');
+    return `<div class="roster-item" style="border-bottom:1px solid var(--border);padding:8px 4px;">
+      <div style="flex:1;">
+        <span style="font-size:13px;color:var(--text);">${esc(snap.date)}</span>
+        <span style="font-size:12px;color:var(--text-muted);margin-left:10px;">${summary}</span>
+      </div>
+      <button class="btn sm danger" onclick="deleteGroupHistoryItem(${i})" title="Ta bort">${ICO.cross}</button>
+    </div>`;
+  }).join('');
+}
+
+function renderHoldApartUI(){
+  const p1sel=document.getElementById('holdApartP1');
+  const p2sel=document.getElementById('holdApartP2');
+  if(!p1sel||!p2sel)return;
+  const activePlayers=players.filter(p=>!p.guest).sort((a,b)=>a.name.localeCompare(b.name,'sv'));
+  const opts=`<option value="">— Välj spelare —</option>`+activePlayers.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+  p1sel.innerHTML=opts;
+  p2sel.innerHTML=opts;
+  const listEl=document.getElementById('holdApartList');
+  if(!listEl)return;
+  const list=getHoldApart();
+  if(!list.length){listEl.innerHTML='<div class="drive-empty">Inga par tillagda ännu.</div>';return;}
+  listEl.innerHTML=list.map((pair,i)=>`
+    <div class="roster-item" style="border-bottom:1px solid var(--border);padding:8px 4px;">
+      <span style="flex:1;font-size:13px;color:var(--text);">${esc(pair.player1)}&ensp;<span style="color:var(--text-muted);">↔</span>&ensp;${esc(pair.player2)}</span>
+      <button class="btn sm danger" onclick="deleteHoldApartPair(${i})" title="Ta bort">${ICO.cross}</button>
+    </div>`).join('');
+}
+
+// ── Historik-algoritm ─────────────────────────────────────────────────
+function buildPairScores(useHistory){
+  const scores={};
+  const key=(a,b)=>[a,b].sort().join('|||');
+  // Håll isär — alltid aktiv, extrem vikt
+  getHoldApart().forEach(pair=>{scores[key(pair.player1,pair.player2)]=1000;});
+  // Historik — bara om checkbox är ibockad
+  if(useHistory){
+    getGroupHistory().forEach(snap=>{
+      snap.groups.forEach(g=>{
+        for(let i=0;i<g.players.length;i++)
+          for(let j=i+1;j<g.players.length;j++){
+            const k=key(g.players[i],g.players[j]);
+            if((scores[k]||0)<1000)scores[k]=(scores[k]||0)+1;
+          }
+      });
+    });
+  }
+  return scores;
+}
+
+function groupPairScore(groupPlayers,pairScores){
+  let score=0;
+  for(let i=0;i<groupPlayers.length;i++)
+    for(let j=i+1;j<groupPlayers.length;j++){
+      const k=[groupPlayers[i].name,groupPlayers[j].name].sort().join('|||');
+      score+=pairScores[k]||0;
+    }
+  return score;
+}
+
+function applyHistorySwaps(groups,pairScores){
+  if(groups.length<2)return;
+  for(let attempt=0;attempt<60;attempt++){
+    const gi=Math.floor(Math.random()*groups.length);
+    let gj=Math.floor(Math.random()*(groups.length-1));
+    if(gj>=gi)gj++;
+    const gA=groups[gi].players,gB=groups[gj].players;
+    if(!gA.length||!gB.length)continue;
+    const ia=Math.floor(Math.random()*gA.length);
+    const ib=Math.floor(Math.random()*gB.length);
+    const pA=gA[ia],pB=gB[ib];
+    if(pA.level!==pB.level)continue; // bevara nivåbalans
+    const before=groupPairScore(gA,pairScores)+groupPairScore(gB,pairScores);
+    gA[ia]=pB;gB[ib]=pA;
+    if(groupPairScore(gA,pairScores)+groupPairScore(gB,pairScores)<before){
+      // behåll bytet
+    } else {
+      gA[ia]=pA;gB[ib]=pB; // återställ
+    }
+  }
+}
+
+function reassignJerseyColors(groups){
+  groups.forEach(g=>{
+    if(g.fullColour){g.players.forEach(p=>p.jerseyColour=g.colour);}
+    else{const half=Math.ceil(g.players.length/2);g.players.forEach((p,j)=>p.jerseyColour=j<half?g.colour:g.colour2);}
+  });
+}
+
+function applyHoldApartColors(groups){
+  const list=getHoldApart();
+  if(!list.length)return;
+  groups.forEach(g=>{
+    if(g.fullColour)return; // en färg — inget att justera
+    list.forEach(pair=>{
+      const p1=g.players.find(p=>p.name===pair.player1);
+      const p2=g.players.find(p=>p.name===pair.player2);
+      if(!p1||!p2)return;
+      if(p1.jerseyColour!==p2.jerseyColour)p2.jerseyColour=p1.jerseyColour; // samma lag
+    });
+  });
+}
 
 // ── PWA Service Worker (offline-stöd) ────────────────────────────────
 if('serviceWorker' in navigator){
