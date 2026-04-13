@@ -3767,6 +3767,15 @@ function saveGroupHistorySnapshot(){
   try{localStorage.setItem(GROUP_HISTORY_KEY,JSON.stringify(history));}catch(e){console.error('Group history save failed:',e);}
 }
 
+function toggleHistoryDetail(index){
+  const el=document.getElementById('hist-detail-'+index);
+  if(!el)return;
+  const open=el.style.display==='none';
+  el.style.display=open?'block':'none';
+  const btn=el.previousElementSibling?.querySelectorAll('button')[0];
+  if(btn)btn.textContent=open?'Stäng':'Detaljer';
+}
+
 function deleteGroupHistoryItem(index){
   const history=getGroupHistory();
   history.splice(index,1);
@@ -3809,14 +3818,27 @@ function renderSettingsTab(){
   const holdList=getHoldApart();
 
   const historyHTML=history.length
-    ?history.map((snap,i)=>`
-      <div class="roster-item" style="border-bottom:1px solid var(--border);padding:8px 4px;">
-        <div style="flex:1;">
-          <span style="font-size:13px;color:var(--text);">${esc(snap.date)}</span>
-          <span style="font-size:12px;color:var(--text-muted);margin-left:10px;">${snap.groups.map(g=>`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${esc(g.colour)};margin-right:3px;vertical-align:middle;"></span>${g.players.length} sp.`).join('&ensp;')}</span>
+    ?history.map((snap,i)=>{
+      const detailRows=snap.groups.map(g=>`
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
+          <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${esc(g.colour)};flex-shrink:0;margin-top:2px;"></span>
+          <span style="font-size:12px;color:var(--text);font-family:'Helvetica Neue',sans-serif;line-height:1.5;">${g.players.map(n=>esc(n)).join(', ')}</span>
+        </div>`).join('');
+      return `
+      <div style="border-bottom:1px solid var(--border);">
+        <div class="roster-item" style="padding:8px 4px;">
+          <div style="flex:1;">
+            <span style="font-size:13px;color:var(--text);">${esc(snap.date)}</span>
+            <span style="font-size:12px;color:var(--text-muted);margin-left:10px;">${snap.groups.map(g=>`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${esc(g.colour)};margin-right:3px;vertical-align:middle;"></span>${g.players.length} sp.`).join('&ensp;')}</span>
+          </div>
+          <button class="btn sm" onclick="toggleHistoryDetail(${i})" style="margin-right:4px;">Detaljer</button>
+          <button class="btn sm danger" onclick="deleteGroupHistoryItem(${i})" title="Ta bort">${ICO.cross}</button>
         </div>
-        <button class="btn sm danger" onclick="deleteGroupHistoryItem(${i})" title="Ta bort">${ICO.cross}</button>
-      </div>`).join('')
+        <div id="hist-detail-${i}" style="display:none;padding:8px 12px 10px 12px;background:var(--surface2);border-radius:0 0 var(--radius) var(--radius);">
+          ${detailRows}
+        </div>
+      </div>`;
+    }).join('')
     :'<div class="drive-empty">Ingen historik sparad ännu. Historik sparas när du visar träningskortet.</div>';
 
   const holdHTML=holdList.length
