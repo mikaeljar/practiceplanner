@@ -2309,9 +2309,10 @@ function showPracticeCard(){
   saveGroupHistorySnapshot();
   const wrap=document.getElementById('practiceCardWrap');
   wrap.innerHTML=buildPracticeCardHTML();
-  // Show "Dela separat" whenever a practice image exists (share on mobile, download on desktop)
+  // Show "Dela separat" only on mobile when a practice image exists
+  const isMobile=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const sepBtn=document.getElementById('shareSeprateBtn');
-  if(sepBtn)sepBtn.style.display=practiceImageData?'':'none';
+  if(sepBtn)sepBtn.style.display=(isMobile&&practiceImageData)?'':'none';
   openModal('cardModal');
 }
 
@@ -3306,7 +3307,6 @@ async function shareCardSeparate(){
     await new Promise((res,rej)=>{practiceImg.onload=res;practiceImg.onerror=rej;practiceImg.src=practiceImageData;});
     // All dynamic stations (hasDrill=true) that have a label — show label always, drill if set
     const stationRows=stations.filter(s=>s.hasDrill&&s.label);
-    showBanner('Skapar bild — '+stationRows.length+' stationer ('+stationRows.filter(s=>s.drill&&s.drill.trim()).length+' med övning)','var(--warn-bg)','var(--warn-txt)',4000);
     const SC=2;
     const PAD=24;
     const MAX_W=800;
