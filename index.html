@@ -2309,10 +2309,9 @@ function showPracticeCard(){
   saveGroupHistorySnapshot();
   const wrap=document.getElementById('practiceCardWrap');
   wrap.innerHTML=buildPracticeCardHTML();
-  // Show "Dela separat" only on mobile when a practice image exists
-  const isMobile=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  // Show "Dela separat" whenever a practice image exists (share on mobile, download on desktop)
   const sepBtn=document.getElementById('shareSeprateBtn');
-  if(sepBtn)sepBtn.style.display=(isMobile&&practiceImageData)?'':'none';
+  if(sepBtn)sepBtn.style.display=practiceImageData?'':'none';
   openModal('cardModal');
 }
 
