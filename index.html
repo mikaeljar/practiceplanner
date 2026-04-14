@@ -3321,22 +3321,37 @@ async function shareCardSeparate(){
       words.forEach(w=>{const t=cur?cur+' '+w:w;if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=w;}else cur=t;});
       if(cur)lines.push(cur);return lines;
     };
-    // Measure total text height
+    // Grid layout: fit stations side by side, min col width 180px
+    const contentW=canvasW-PAD*2;
+    const MIN_COL=180;
+    const numCols=Math.min(stationRows.length,Math.max(1,Math.floor(contentW/MIN_COL)));
+    const colW=Math.floor(contentW/numCols);
+    const COL_PAD=10; // inner padding between columns
+    // Measure each station's height in its column
     const tmpC=document.createElement('canvas');const tmpCtx=tmpC.getContext('2d');
+    const stationH=stationRows.map(s=>{
+      let h=20; // label line
+      if(s.drill&&s.drill.trim()){
+        tmpCtx.font='13px sans-serif';
+        s.drill.trim().split('\n').forEach(line=>{
+          h+=(wrapText(tmpCtx,line,colW-COL_PAD*2).length||1)*17;
+        });
+      }
+      h+=10; // bottom gap
+      return h;
+    });
+    // Calculate row heights (max height per row)
     let textH=0;
     if(stationRows.length){
       textH+=PAD;
-      stationRows.forEach(s=>{
-        textH+=20; // label
-        if(s.drill&&s.drill.trim()){
-          tmpCtx.font='13px sans-serif';
-          s.drill.trim().split('\n').forEach(line=>{
-            const wrapped=wrapText(tmpCtx,line,canvasW-PAD*2);
-            textH+=(wrapped.length||1)*18;
-          });
+      for(let r=0;r<Math.ceil(stationRows.length/numCols);r++){
+        let rowH=0;
+        for(let c=0;c<numCols;c++){
+          const i=r*numCols+c;
+          if(i<stationRows.length)rowH=Math.max(rowH,stationH[i]);
         }
-        textH+=12;
-      });
+        textH+=rowH;
+      }
     }
     const totalH=PAD+iH+textH+PAD;
     const c2=document.createElement('canvas');
@@ -3346,22 +3361,30 @@ async function shareCardSeparate(){
     ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvasW,totalH);
     ctx.drawImage(practiceImg,PAD,PAD,iW,iH);
     if(stationRows.length){
-      let y=PAD+iH+PAD+16;
-      stationRows.forEach(s=>{
-        ctx.font='bold 14px sans-serif';
-        ctx.fillStyle='#111111';
-        ctx.fillText(s.label,PAD,y);
-        y+=20;
-        if(s.drill&&s.drill.trim()){
-          ctx.font='13px sans-serif';
-          ctx.fillStyle='#444444';
-          s.drill.trim().split('\n').forEach(line=>{
-            const wrapped=wrapText(ctx,line,canvasW-PAD*2);
-            wrapped.forEach(wl=>{ctx.fillText(wl,PAD,y);y+=18;});
-          });
+      let rowY=PAD+iH+PAD;
+      for(let r=0;r<Math.ceil(stationRows.length/numCols);r++){
+        let rowH=0;
+        for(let c=0;c<numCols;c++){
+          const i=r*numCols+c;
+          if(i>=stationRows.length)break;
+          const s=stationRows[i];
+          const x=PAD+c*colW+COL_PAD;
+          let y=rowY+16;
+          ctx.font='bold 14px sans-serif';
+          ctx.fillStyle='#111111';
+          ctx.fillText(s.label,x,y);
+          y+=20;
+          if(s.drill&&s.drill.trim()){
+            ctx.font='13px sans-serif';
+            ctx.fillStyle='#444444';
+            s.drill.trim().split('\n').forEach(line=>{
+              wrapText(ctx,line,colW-COL_PAD*2).forEach(wl=>{ctx.fillText(wl,x,y);y+=17;});
+            });
+          }
+          rowH=Math.max(rowH,stationH[i]);
         }
-        y+=12;
-      });
+        rowY+=rowH;
+      }
     }
     const imgFile=await new Promise((res,rej)=>c2.toBlob(b=>{
       if(!b){rej(new Error('toBlob failed'));return;}
