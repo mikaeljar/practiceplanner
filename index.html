@@ -3308,9 +3308,7 @@ async function shareCardSeparate(){
       wrap.style.cssText='position:fixed;left:-9999px;top:0;background:#fff;padding:16px;font-family:Helvetica Neue,sans-serif;width:600px;box-sizing:border-box;';
       // Practice diagram
       const img=document.createElement('img');
-      img.src=practiceImageData;
       img.style.cssText='width:100%;display:block;border-radius:6px;';
-      wrap.appendChild(img);
       // Station labels + drills
       const stationsWithDrills=stations.filter(s=>s.drill&&s.drill.trim());
       if(stationsWithDrills.length){
@@ -3331,8 +3329,9 @@ async function shareCardSeparate(){
         });
         wrap.appendChild(sec);
       }
+      wrap.insertBefore(img,wrap.firstChild);
       document.body.appendChild(wrap);
-      img.onload=async()=>{
+      const doRender=async()=>{
         try{
           const c=await html2canvas(wrap,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',logging:false});
           document.body.removeChild(wrap);
@@ -3342,7 +3341,10 @@ async function shareCardSeparate(){
           },'image/png');
         }catch(e){document.body.removeChild(wrap);reject(e);}
       };
+      img.onload=doRender;
       img.onerror=()=>{document.body.removeChild(wrap);reject(new Error('Kunde inte ladda träningsbilden'));};
+      img.src=practiceImageData;
+      if(img.complete)doRender();
     });
     // File 2: groups only — temporarily hide the image section
     const imgSection=document.getElementById('pc-image-section');
