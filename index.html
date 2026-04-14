@@ -3305,59 +3305,62 @@ async function shareCardSeparate(){
     // File 1: practice image + station labels/drills combined (Canvas 2D)
     const practiceImg=new Image();
     await new Promise((res,rej)=>{practiceImg.onload=res;practiceImg.onerror=rej;practiceImg.src=practiceImageData;});
-    const stationsWithDrills=stations.filter(s=>s.drill&&s.drill.trim());
-    console.log('[shareCardSeparate] stationsWithDrills:',stationsWithDrills.length,stationsWithDrills.map(s=>s.label));
-    console.log('[shareCardSeparate] practiceImg size:',practiceImg.naturalWidth,'x',practiceImg.naturalHeight);
+    // All dynamic stations (hasDrill=true) that have a label — show label always, drill if set
+    const stationRows=stations.filter(s=>s.hasDrill&&s.label);
+    showBanner('Skapar bild — '+stationRows.length+' stationer ('+stationRows.filter(s=>s.drill&&s.drill.trim()).length+' med övning)','var(--warn-bg)','var(--warn-txt)',4000);
     const SC=2;
     const PAD=24;
-    const MAX_W=800; // cap logical width to avoid oversized canvas on mobile
+    const MAX_W=800;
     const rawW=practiceImg.naturalWidth||MAX_W;
     const rawH=practiceImg.naturalHeight||600;
-    const scale=Math.min(1,MAX_W/rawW);
-    const iW=Math.round(rawW*scale);
-    const iH=Math.round(rawH*scale);
+    const imgScale=Math.min(1,MAX_W/rawW);
+    const iW=Math.round(rawW*imgScale);
+    const iH=Math.round(rawH*imgScale);
     const canvasW=iW+PAD*2;
     const wrapText=(ctx,text,maxW)=>{
       const words=text.split(' ');const lines=[];let cur='';
       words.forEach(w=>{const t=cur?cur+' '+w:w;if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=w;}else cur=t;});
       if(cur)lines.push(cur);return lines;
     };
-    // Measure total text height needed
+    // Measure total text height
     const tmpC=document.createElement('canvas');const tmpCtx=tmpC.getContext('2d');
     let textH=0;
-    if(stationsWithDrills.length){
+    if(stationRows.length){
       textH+=PAD;
-      stationsWithDrills.forEach(s=>{
-        textH+=20;
-        tmpCtx.font='13px sans-serif';
-        s.drill.trim().split('\n').forEach(line=>{
-          const wrapped=wrapText(tmpCtx,line,canvasW-PAD*2);
-          textH+=(wrapped.length||1)*18;
-        });
+      stationRows.forEach(s=>{
+        textH+=20; // label
+        if(s.drill&&s.drill.trim()){
+          tmpCtx.font='13px sans-serif';
+          s.drill.trim().split('\n').forEach(line=>{
+            const wrapped=wrapText(tmpCtx,line,canvasW-PAD*2);
+            textH+=(wrapped.length||1)*18;
+          });
+        }
         textH+=12;
       });
     }
     const totalH=PAD+iH+textH+PAD;
-    console.log('[shareCardSeparate] canvas:',canvasW,'x',totalH,'textH:',textH);
     const c2=document.createElement('canvas');
     c2.width=canvasW*SC;c2.height=totalH*SC;
     const ctx=c2.getContext('2d');
     ctx.scale(SC,SC);
     ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvasW,totalH);
     ctx.drawImage(practiceImg,PAD,PAD,iW,iH);
-    if(stationsWithDrills.length){
-      let y=PAD+iH+PAD+16; // +16 for text baseline offset
-      stationsWithDrills.forEach(s=>{
+    if(stationRows.length){
+      let y=PAD+iH+PAD+16;
+      stationRows.forEach(s=>{
         ctx.font='bold 14px sans-serif';
         ctx.fillStyle='#111111';
-        ctx.fillText(s.label||'Station',PAD,y);
+        ctx.fillText(s.label,PAD,y);
         y+=20;
-        ctx.font='13px sans-serif';
-        ctx.fillStyle='#444444';
-        s.drill.trim().split('\n').forEach(line=>{
-          const wrapped=wrapText(ctx,line,canvasW-PAD*2);
-          wrapped.forEach(wl=>{ctx.fillText(wl,PAD,y);y+=18;});
-        });
+        if(s.drill&&s.drill.trim()){
+          ctx.font='13px sans-serif';
+          ctx.fillStyle='#444444';
+          s.drill.trim().split('\n').forEach(line=>{
+            const wrapped=wrapText(ctx,line,canvasW-PAD*2);
+            wrapped.forEach(wl=>{ctx.fillText(wl,PAD,y);y+=18;});
+          });
+        }
         y+=12;
       });
     }
