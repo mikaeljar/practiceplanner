@@ -3382,7 +3382,9 @@ async function shareCardSeparate(){
         try{await navigator.share({files,title:'Träning '+dateStr});}
         catch(err){if(err.name!=='AbortError')showBanner('Delning avbröts','var(--warn-bg)','var(--warn-txt)');}
       }else{
-        showBanner('Din enhet stöder inte fildelning','var(--warn-bg)','var(--warn-txt)');
+        // Desktop fallback: download both files
+        fallbackDownload(c2,'Traningsbild-'+dateStr+'.png');
+        fallbackDownload(canvas,'Grupper-'+dateStr+'.png');
       }
       btn.innerHTML=origHTML;btn.disabled=false;
     },'image/png');
