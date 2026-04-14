@@ -3302,10 +3302,48 @@ async function shareCardSeparate(){
   btn.textContent='Förbereder...';btn.disabled=true;
   try{
     const dateStr=getDateStr().replace(/\s/g,'-');
-    // File 1: practice image directly from base64
-    const imgRes=await fetch(practiceImageData);
-    const imgBlob=await imgRes.blob();
-    const imgFile=new File([imgBlob],'Traningsbild-'+dateStr+'.png',{type:imgBlob.type||'image/png'});
+    // File 1: practice image + station labels/drills
+    const imgFile = await new Promise((resolve,reject)=>{
+      const wrap=document.createElement('div');
+      wrap.style.cssText='position:fixed;left:-9999px;top:0;background:#fff;padding:16px;font-family:Helvetica Neue,sans-serif;width:600px;box-sizing:border-box;';
+      // Practice diagram
+      const img=document.createElement('img');
+      img.src=practiceImageData;
+      img.style.cssText='width:100%;display:block;border-radius:6px;';
+      wrap.appendChild(img);
+      // Station labels + drills
+      const stationsWithDrills=stations.filter(s=>s.drill&&s.drill.trim());
+      if(stationsWithDrills.length){
+        const sec=document.createElement('div');
+        sec.style.cssText='margin-top:12px;';
+        stationsWithDrills.forEach(s=>{
+          const row=document.createElement('div');
+          row.style.cssText='margin-bottom:8px;';
+          const lbl=document.createElement('div');
+          lbl.style.cssText='font-weight:600;font-size:13px;color:#111;';
+          lbl.textContent=s.label||'Station';
+          const drill=document.createElement('div');
+          drill.style.cssText='font-size:12px;color:#444;margin-top:2px;white-space:pre-wrap;';
+          drill.textContent=s.drill.trim();
+          row.appendChild(lbl);
+          row.appendChild(drill);
+          sec.appendChild(row);
+        });
+        wrap.appendChild(sec);
+      }
+      document.body.appendChild(wrap);
+      img.onload=async()=>{
+        try{
+          const c=await html2canvas(wrap,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',logging:false});
+          document.body.removeChild(wrap);
+          c.toBlob(blob=>{
+            if(!blob){reject(new Error('toBlob failed'));return;}
+            resolve(new File([blob],'Traningsbild-'+dateStr+'.png',{type:'image/png'}));
+          },'image/png');
+        }catch(e){document.body.removeChild(wrap);reject(e);}
+      };
+      img.onerror=()=>{document.body.removeChild(wrap);reject(new Error('Kunde inte ladda träningsbilden'));};
+    });
     // File 2: groups only — temporarily hide the image section
     const imgSection=document.getElementById('pc-image-section');
     if(imgSection)imgSection.style.display='none';
