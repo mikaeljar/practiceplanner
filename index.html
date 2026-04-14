@@ -769,6 +769,7 @@ input:focus,select:focus{border-color:var(--accent);}
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('cardModal')">Stäng</button>
       <button class="btn primary" id="saveCardBtn" onclick="saveCardAsImage()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><rect x="1" y="4" width="11" height="7.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="6.5" cy="7.5" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 4l.8-1.5h2.4L8.5 4" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg> Spara som bild</button>
+      <button class="btn" id="shareSeprateBtn" style="display:none;" onclick="shareCardSeparate()" title="Dela träningsbild och grupper som två separata bilder"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><circle cx="10" cy="2.5" r="1.5" stroke="currentColor" stroke-width="1.2"/><circle cx="10" cy="10.5" r="1.5" stroke="currentColor" stroke-width="1.2"/><circle cx="3" cy="6.5" r="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4.3 5.8L8.7 3.2M4.3 7.2L8.7 9.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Dela separat</button>
       <button class="btn" onclick="copyTextOutput()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><rect x="1.5" y="3.5" width="7" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 3V2a1 1 0 0 1 1-1h5.5a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Kopiera till text</button>
     </div>
   </div>
@@ -2308,6 +2309,10 @@ function showPracticeCard(){
   saveGroupHistorySnapshot();
   const wrap=document.getElementById('practiceCardWrap');
   wrap.innerHTML=buildPracticeCardHTML();
+  // Show "Dela separat" only on mobile when a practice image exists
+  const isMobile=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const sepBtn=document.getElementById('shareSeprateBtn');
+  if(sepBtn)sepBtn.style.display=(isMobile&&practiceImageData)?'':'none';
   openModal('cardModal');
 }
 
@@ -2342,7 +2347,7 @@ function buildPracticeCardHTML(){
 
   // Practice image
   if(practiceImageData){
-    html+=`<div class="pc-section" style="padding:0;"><img src="${practiceImageData}" alt="Träningsbild" style="width:100%;display:block;border-radius:0;"/></div>`;
+    html+=`<div class="pc-section" id="pc-image-section" style="padding:0;"><img src="${practiceImageData}" alt="Träningsbild" style="width:100%;display:block;border-radius:0;"/></div>`;
   }
   groups.forEach((g,gi)=>{
     const colLabel=g.fullColour?colourName(g.colour):`${colourName(g.colour)} / ${colourName(g.colour2)}`;
@@ -3288,6 +3293,41 @@ async function saveCardAsImage(){
     console.error('saveCardAsImage error:',err);
     alert('Kunde inte spara bilden: '+err.message);
     btn.textContent=origText;btn.disabled=false;
+  }
+}
+
+async function shareCardSeparate(){
+  const btn=document.getElementById('shareSeprateBtn');
+  const origHTML=btn.innerHTML;
+  btn.textContent='Förbereder...';btn.disabled=true;
+  try{
+    const dateStr=getDateStr().replace(/\s/g,'-');
+    // File 1: practice image directly from base64
+    const imgRes=await fetch(practiceImageData);
+    const imgBlob=await imgRes.blob();
+    const imgFile=new File([imgBlob],'Traningsbild-'+dateStr+'.png',{type:imgBlob.type||'image/png'});
+    // File 2: groups only — temporarily hide the image section
+    const imgSection=document.getElementById('pc-image-section');
+    if(imgSection)imgSection.style.display='none';
+    const card=document.querySelector('#practiceCardWrap .practice-card');
+    const canvas=await html2canvas(card,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',logging:false,width:card.offsetWidth,height:card.offsetHeight});
+    if(imgSection)imgSection.style.display='';
+    canvas.toBlob(async blob=>{
+      if(!blob){showBanner('Kunde inte skapa gruppersbild','var(--warn-bg)','var(--warn-txt)');btn.innerHTML=origHTML;btn.disabled=false;return;}
+      const groupsFile=new File([blob],'Grupper-'+dateStr+'.png',{type:'image/png'});
+      const files=[groupsFile,imgFile];
+      if(navigator.canShare&&navigator.canShare({files})){
+        try{await navigator.share({files,title:'Träning '+dateStr});}
+        catch(err){if(err.name!=='AbortError')showBanner('Delning avbröts','var(--warn-bg)','var(--warn-txt)');}
+      }else{
+        showBanner('Din enhet stöder inte fildelning','var(--warn-bg)','var(--warn-txt)');
+      }
+      btn.innerHTML=origHTML;btn.disabled=false;
+    },'image/png');
+  }catch(err){
+    console.error('shareCardSeparate error:',err);
+    showBanner('Fel: '+err.message,'var(--danger-bg)','var(--danger-txt)');
+    btn.innerHTML=origHTML;btn.disabled=false;
   }
 }
 
