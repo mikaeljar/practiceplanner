@@ -3302,43 +3302,60 @@ async function shareCardSeparate(){
   btn.textContent='Förbereder...';btn.disabled=true;
   try{
     const dateStr=getDateStr().replace(/\s/g,'-');
-    // File 1: practice image + station labels/drills combined
-    const wrap=document.createElement('div');
-    wrap.style.cssText='position:fixed;left:-9999px;top:0;background:#fff;padding:16px;font-family:Helvetica Neue,sans-serif;width:600px;box-sizing:border-box;';
-    const img=document.createElement('img');
-    img.style.cssText='width:100%;display:block;border-radius:6px;';
-    wrap.appendChild(img);
+    // File 1: practice image + station labels/drills combined (Canvas 2D)
+    const practiceImg=new Image();
+    await new Promise((res,rej)=>{practiceImg.onload=res;practiceImg.onerror=rej;practiceImg.src=practiceImageData;});
     const stationsWithDrills=stations.filter(s=>s.drill&&s.drill.trim());
-    if(stationsWithDrills.length){
-      const sec=document.createElement('div');
-      sec.style.cssText='margin-top:12px;';
-      stationsWithDrills.forEach(s=>{
-        const row=document.createElement('div');
-        row.style.cssText='margin-bottom:8px;';
-        const lbl=document.createElement('div');
-        lbl.style.cssText='font-weight:600;font-size:13px;color:#111;';
-        lbl.textContent=s.label||'Station';
-        const drill=document.createElement('div');
-        drill.style.cssText='font-size:12px;color:#444;margin-top:2px;white-space:pre-wrap;';
-        drill.textContent=s.drill.trim();
-        row.appendChild(lbl);
-        row.appendChild(drill);
-        sec.appendChild(row);
-      });
-      wrap.appendChild(sec);
+    const SC=2; // retina scale
+    const PAD=24;
+    const iW=practiceImg.naturalWidth||800;
+    const iH=practiceImg.naturalHeight||600;
+    const canvasW=iW+PAD*2;
+    // Helper: wrap text to fit maxWidth, returns array of lines
+    function wrapText(ctx,text,maxW){
+      const words=text.split(' ');const lines=[];let cur='';
+      words.forEach(w=>{const t=cur?cur+' '+w:w;if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=w;}else cur=t;});
+      if(cur)lines.push(cur);return lines;
     }
-    document.body.appendChild(wrap);
-    // Set src and wait for image to load
-    img.src=practiceImageData;
-    await new Promise((res,rej)=>{
-      if(img.complete){res();return;}
-      img.onload=res;img.onerror=rej;
-    });
-    // Let browser finish layout before capturing
-    await new Promise(res=>requestAnimationFrame(()=>requestAnimationFrame(res)));
-    const wrapCanvas=await html2canvas(wrap,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',logging:false});
-    document.body.removeChild(wrap);
-    const imgFile=await new Promise((res,rej)=>wrapCanvas.toBlob(b=>{
+    // Measure total text height needed
+    const tmpC=document.createElement('canvas');const tmpCtx=tmpC.getContext('2d');
+    let textH=0;
+    if(stationsWithDrills.length){
+      textH+=PAD;
+      stationsWithDrills.forEach(s=>{
+        textH+=18; // label line
+        tmpCtx.font='13px Helvetica Neue,sans-serif';
+        s.drill.trim().split('\n').forEach(line=>{
+          const wrapped=wrapText(tmpCtx,line,canvasW-PAD*2);
+          textH+=(wrapped.length||1)*18;
+        });
+        textH+=12; // gap between stations
+      });
+    }
+    const totalH=PAD+iH+textH+PAD;
+    const c2=document.createElement('canvas');
+    c2.width=canvasW*SC;c2.height=totalH*SC;
+    const ctx=c2.getContext('2d');
+    ctx.scale(SC,SC);
+    ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvasW,totalH);
+    ctx.drawImage(practiceImg,PAD,PAD,iW,iH);
+    if(stationsWithDrills.length){
+      let y=PAD+iH+PAD;
+      stationsWithDrills.forEach(s=>{
+        ctx.font='bold 14px Helvetica Neue,sans-serif';
+        ctx.fillStyle='#111111';
+        ctx.fillText(s.label||'Station',PAD,y);
+        y+=18;
+        ctx.font='13px Helvetica Neue,sans-serif';
+        ctx.fillStyle='#444444';
+        s.drill.trim().split('\n').forEach(line=>{
+          const wrapped=wrapText(ctx,line,canvasW-PAD*2);
+          wrapped.forEach(wl=>{ctx.fillText(wl,PAD,y);y+=18;});
+        });
+        y+=12;
+      });
+    }
+    const imgFile=await new Promise((res,rej)=>c2.toBlob(b=>{
       if(!b){rej(new Error('toBlob failed'));return;}
       res(new File([b],'Traningsbild-'+dateStr+'.png',{type:'image/png'}));
     },'image/png'));
