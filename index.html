@@ -4100,15 +4100,22 @@ function enforceHoldApart(groups){
       if(mover)break;
     }
     if(!mover)break;
-    // Try to swap mover to another group — same level first, then any level
+    // Build level priority: same level first, then down one, up one, down two, up two...
+    const LEVELS=['a','b','c','d','e'];
+    const mi=LEVELS.indexOf(mover.level);
+    const levelPriority=[LEVELS[mi]];
+    for(let step=1;step<LEVELS.length;step++){
+      if(mi+step<LEVELS.length)levelPriority.push(LEVELS[mi+step]);
+      if(mi-step>=0)levelPriority.push(LEVELS[mi-step]);
+    }
     let bestSwap=null,bestViol=countViolations();
-    for(const sameLevelOnly of[true,false]){
+    for(const lvl of levelPriority){
       for(let gti=0;gti<groups.length;gti++){
         if(gti===moverGi)continue;
         for(let ti=0;ti<groups[gti].players.length;ti++){
           const target=groups[gti].players[ti];
           if(target.position==='goalie')continue; // never swap with a goalie
-          if(sameLevelOnly&&target.level!==mover.level)continue;
+          if(target.level!==lvl)continue;
           const si=groups[moverGi].players.indexOf(mover);
           // Simulate swap
           groups[moverGi].players[si]=target;
