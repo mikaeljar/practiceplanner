@@ -2018,7 +2018,7 @@ function renderGroups(){
           ondragover="onDragOver(event,${gi})"
           ondrop="onDrop(event,${gi})"
           ondragleave="onDragLeave(event,${gi})">
-          ${(usePositions&&document.getElementById('groupUsePositions')?.checked?sortedGroupPlayersByPosition(g):g.players).map(p=>{
+          ${(usePositions&&document.getElementById('groupUsePositions')?.checked?sortedGroupPlayersByPosition(g):sortedGroupPlayers(g)).map(p=>{
             const jc=g.fullColour?g.colour:(p.jerseyColour||g.colour);
             return `<div class="group-player${p.attendance==='no'?' absent-warning':''}" draggable="true" data-pid="${p.id}" data-gi="${gi}"
               ondragstart="playerDragStart(event)" ondragend="onDragEnd(event)"
