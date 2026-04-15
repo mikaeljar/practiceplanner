@@ -9,7 +9,7 @@ A single-file web app for planning ice hockey practices — managing rosters, at
 ### Roster management
 - Add players with name, jersey number, level (A/B/C/D/E), and position (Forward, Center, Defence, Goalie)
 - Add coaches with role (On-ice, Off-ice, Goalie coach)
-- Import rosters from JSON or Excel-exported data
+- Import rosters from JSON
 - Save and load rosters locally or via Google Drive
 
 ### Attendance
