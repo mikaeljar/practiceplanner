@@ -1636,6 +1636,7 @@ function generateGroups(){
   enforceHoldApart(groups);
   reassignJerseyColors(groups);
   applyHoldApartColors(groups);
+  balanceJerseyColourLevels(groups);
 
   document.getElementById('textOutputBtn').disabled=false;
   document.getElementById('cardOutputBtn').disabled=false;
@@ -4184,6 +4185,49 @@ function applyHoldApartColors(groups){
         if(other)other.jerseyColour=oldColour;
       }
     });
+  });
+}
+
+// Balance level distribution between jersey colours within each group.
+// Iteratively swaps colour assignments between pairs of players to reduce
+// level skew. Runs after applyHoldApartColors so hold-apart assignments
+// are never disturbed.
+function balanceJerseyColourLevels(groups){
+  const holdApartList=getHoldApart();
+  const LEVELS=['a','b','c','d','e'];
+  groups.forEach(g=>{
+    if(g.fullColour)return;
+    const c1=g.colour,c2=g.colour2;
+    // Lock players involved in hold-apart pairs that share this group — their
+    // colour was explicitly set by applyHoldApartColors.
+    const fixed=new Set();
+    holdApartList.forEach(pair=>{
+      const a=g.players.find(p=>p.name===pair.player1);
+      const b=g.players.find(p=>p.name===pair.player2);
+      if(a&&b){fixed.add(a);fixed.add(b);}
+    });
+    const imbalance=()=>LEVELS.reduce((sum,lv)=>{
+      const n1=g.players.filter(p=>p.jerseyColour===c1&&p.level===lv).length;
+      const n2=g.players.filter(p=>p.jerseyColour===c2&&p.level===lv).length;
+      return sum+Math.abs(n1-n2);
+    },0);
+    let improved=true;
+    while(improved){
+      improved=false;
+      const movable=g.players.filter(p=>!fixed.has(p));
+      const mc1=movable.filter(p=>p.jerseyColour===c1);
+      const mc2=movable.filter(p=>p.jerseyColour===c2);
+      let bestGain=0,bestA=null,bestB=null;
+      const curr=imbalance();
+      mc1.forEach(a=>{mc2.forEach(b=>{
+        if(a.level===b.level)return;
+        a.jerseyColour=c2;b.jerseyColour=c1;
+        const gain=curr-imbalance();
+        a.jerseyColour=c1;b.jerseyColour=c2;
+        if(gain>bestGain){bestGain=gain;bestA=a;bestB=b;}
+      });});
+      if(bestA){bestA.jerseyColour=c2;bestB.jerseyColour=c1;improved=true;}
+    }
   });
 }
 
