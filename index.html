@@ -2320,6 +2320,13 @@ function showPracticeCard(){
   const sepInfo=document.getElementById('shareSeprateInfo');
   if(sepBtn)sepBtn.style.display=showSep?'':'none';
   if(sepInfo)sepInfo.style.display=showSep?'':'none';
+  // Update save button label based on share capability
+  const saveBtn=document.getElementById('saveCardBtn');
+  if(saveBtn){
+    const canShare=isMobile&&!!navigator.share&&!!navigator.canShare;
+    const svgIcon=saveBtn.querySelector('svg').outerHTML;
+    saveBtn.innerHTML=svgIcon+(canShare?' Dela bild':' Spara bild');
+  }
   openModal('cardModal');
 }
 
