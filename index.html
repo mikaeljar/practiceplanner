@@ -1631,9 +1631,11 @@ function generateGroups(){
   const hasScores=Object.keys(pairScores).length>0;
   if(hasScores){
     applyHistorySwaps(groups,pairScores);
-    reassignJerseyColors(groups);
-    applyHoldApartColors(groups);
   }
+  // Always try to enforce hold-apart by moving players to different groups
+  enforceHoldApart(groups);
+  reassignJerseyColors(groups);
+  applyHoldApartColors(groups);
 
   document.getElementById('textOutputBtn').disabled=false;
   document.getElementById('cardOutputBtn').disabled=false;
@@ -4064,6 +4066,67 @@ function groupPairScore(groupPlayers,pairScores){
       score+=pairScores[k]||0;
     }
   return score;
+}
+
+function enforceHoldApart(groups){
+  const list=getHoldApart();
+  if(!list.length)return;
+  const countViolations=()=>{
+    let n=0;
+    list.forEach(pair=>{
+      groups.forEach(g=>{
+        if(g.players.some(p=>p.name===pair.player1)&&g.players.some(p=>p.name===pair.player2))n++;
+      });
+    });
+    return n;
+  };
+  const maxPasses=list.length*2+4;
+  for(let pass=0;pass<maxPasses;pass++){
+    if(!countViolations())break;
+    // Find first violation
+    let mover=null,moverGi=-1;
+    for(const pair of list){
+      for(let gi=0;gi<groups.length;gi++){
+        const p1=groups[gi].players.find(p=>p.name===pair.player1);
+        const p2=groups[gi].players.find(p=>p.name===pair.player2);
+        if(p1&&p2){
+          // Move the player involved in more violations
+          const p1v=list.filter(pr=>pr.player1===p1.name||pr.player2===p1.name).length;
+          const p2v=list.filter(pr=>pr.player1===p2.name||pr.player2===p2.name).length;
+          mover=p1v>=p2v?p1:p2;moverGi=gi;break;
+        }
+      }
+      if(mover)break;
+    }
+    if(!mover)break;
+    // Try to swap mover to another group — same level first, then any level
+    let bestSwap=null,bestViol=countViolations();
+    for(const sameLevelOnly of[true,false]){
+      for(let gti=0;gti<groups.length;gti++){
+        if(gti===moverGi)continue;
+        for(let ti=0;ti<groups[gti].players.length;ti++){
+          const target=groups[gti].players[ti];
+          if(sameLevelOnly&&target.level!==mover.level)continue;
+          const si=groups[moverGi].players.indexOf(mover);
+          // Simulate swap
+          groups[moverGi].players[si]=target;
+          groups[gti].players[ti]=mover;
+          const v=countViolations();
+          // Restore
+          groups[moverGi].players[si]=mover;
+          groups[gti].players[ti]=target;
+          if(v<bestViol){bestViol=v;bestSwap={si,gti,ti};}
+        }
+      }
+      if(bestSwap)break;
+    }
+    if(!bestSwap)break;
+    // Apply best swap
+    const{si,gti,ti}=bestSwap;
+    const tmp=groups[moverGi].players[si];
+    groups[moverGi].players[si]=groups[gti].players[ti];
+    groups[gti].players[ti]=tmp;
+  }
 }
 
 function applyHistorySwaps(groups,pairScores){
