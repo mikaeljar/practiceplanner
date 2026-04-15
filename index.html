@@ -4090,9 +4090,10 @@ function enforceHoldApart(groups){
         const p1=groups[gi].players.find(p=>p.name===pair.player1);
         const p2=groups[gi].players.find(p=>p.name===pair.player2);
         if(p1&&p2){
-          // Move the player involved in more violations
-          const p1v=list.filter(pr=>pr.player1===p1.name||pr.player2===p1.name).length;
-          const p2v=list.filter(pr=>pr.player1===p2.name||pr.player2===p2.name).length;
+          // Move the player involved in more violations (never move goalies)
+          const p1v=p1.position==='goalie'?-1:list.filter(pr=>pr.player1===p1.name||pr.player2===p1.name).length;
+          const p2v=p2.position==='goalie'?-1:list.filter(pr=>pr.player1===p2.name||pr.player2===p2.name).length;
+          if(p1v<0&&p2v<0)continue; // both goalies — skip
           mover=p1v>=p2v?p1:p2;moverGi=gi;break;
         }
       }
@@ -4106,6 +4107,7 @@ function enforceHoldApart(groups){
         if(gti===moverGi)continue;
         for(let ti=0;ti<groups[gti].players.length;ti++){
           const target=groups[gti].players[ti];
+          if(target.position==='goalie')continue; // never swap with a goalie
           if(sameLevelOnly&&target.level!==mover.level)continue;
           const si=groups[moverGi].players.indexOf(mover);
           // Simulate swap
