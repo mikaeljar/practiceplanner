@@ -1,6 +1,6 @@
 # Practiceplanner
 
-A single-file web app for planning ice hockey practices — managing rosters, attendance, and group assignments. Built for HHC (Harrydahl HC) but easily adaptable for any team.
+A single-file web app for planning ice hockey practices — managing rosters, attendance, and group assignments.
 
 > **Note:** The user interface is entirely in Swedish.
 
