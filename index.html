@@ -252,9 +252,9 @@ input:focus,select:focus{border-color:var(--accent);}
 .pool-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:var(--surface);border:0.5px solid var(--border-strong);font-family:'Helvetica Neue',sans-serif;font-size:13px;color:var(--text);cursor:grab;transition:box-shadow 0.1s;}
 .pool-chip:hover{box-shadow:0 2px 8px rgba(0,0,0,0.1);}
 .pool-chip.dragging{opacity:0.4;}
-.traning-band{padding:8px 0 10px;border-bottom:1px solid var(--border);margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
-.traning-band-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.traning-band-right{display:flex;align-items:center;gap:5px;}
+.practice-band{padding:8px 0 10px;border-bottom:1px solid var(--border);margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.practice-band-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.practice-band-right{display:flex;align-items:center;gap:5px;}
 .btn-icon-band{width:32px;height:32px;border-radius:var(--radius);border:1px solid var(--border-strong);background:transparent;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.12s;}
 .btn-icon-band:hover{background:var(--surface2);}
 .btn-icon-band:disabled{opacity:0.38;cursor:not-allowed;}
@@ -298,7 +298,7 @@ input:focus,select:focus{border-color:var(--accent);}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
 .modal textarea{width:100%;height:60px;font-size:12px;font-family:'Courier New',monospace;padding:8px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface2);color:var(--text);resize:none;margin-bottom:1rem;}
 /* Practice card preview inside modal */
-/* Action sheet (long-press flytta spelare på mobil) */
+/* Action sheet (long-press move player on mobile) */
 .action-sheet-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:flex-end;justify-content:center;}
 .action-sheet-overlay.open{display:flex;}
 .action-sheet{background:var(--surface);border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:14px 16px 32px;box-shadow:0 -4px 24px rgba(0,0,0,0.18);max-height:80vh;overflow-y:auto;}
@@ -327,8 +327,8 @@ input:focus,select:focus{border-color:var(--accent);}
 .drive-file-date{font-size:11px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;white-space:nowrap;}
 .drive-section-title{font-size:11px;font-family:'Helvetica Neue',sans-serif;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;margin-top:4px;}
 .drive-empty{font-size:13px;color:var(--text-faint);font-family:'Helvetica Neue',sans-serif;padding:12px 0;text-align:center;}
-/* Upplägg band + drill history */
-.upplägg-band{display:flex;align-items:center;gap:6px;padding:8px 0 10px;border-bottom:1px solid var(--border);margin-bottom:1.25rem;flex-wrap:wrap;}
+/* Template band + drill history */
+.template-band{display:flex;align-items:center;gap:6px;padding:8px 0 10px;border-bottom:1px solid var(--border);margin-bottom:1.25rem;flex-wrap:wrap;}
 .drill-input-wrap{position:relative;flex:1;}
 .drill-history-btn{width:26px;height:28px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface2);color:var(--text-muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;transition:background 0.1s;}
 .drill-history-btn:hover{background:var(--border);color:var(--text);}
@@ -366,26 +366,26 @@ input:focus,select:focus{border-color:var(--accent);}
 <main>
 
   <!-- TRÄNINGSINFO-BAND — visas bara under Planera träning -->
-  <div id="traningBand" style="display:none;">
-    <div class="traning-band">
-      <div class="traning-band-left">
+  <div id="practiceBand" style="display:none;">
+    <div class="practice-band">
+      <div class="practice-band-left">
         <div class="band-menu-wrap">
           <button class="band-menu-btn" onclick="toggleBandMenu(event)" title="Mer">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="pointer-events:none;"><circle cx="2" cy="7" r="1.3" fill="currentColor"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/><circle cx="12" cy="7" r="1.3" fill="currentColor"/></svg>
           </button>
           <div class="band-dropdown" id="bandDropdown">
-            <button class="band-dropdown-item" onclick="loadTraningInit();closeBandMenu()">
+            <button class="band-dropdown-item" onclick="loadPracticeInit();closeBandMenu()">
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="flex-shrink:0;"><path d="M6.5 10.5V2.5M2.5 6.5L6.5 2.5l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Ladda träning
             </button>
-            <button class="band-dropdown-item" onclick="nyTraning();closeBandMenu()">
+            <button class="band-dropdown-item" onclick="newPractice();closeBandMenu()">
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="flex-shrink:0;"><path d="M11 6.5A4.5 4.5 0 1 1 8 2.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M8 2l2.5-.5L11 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Ny träning
             </button>
           </div>
         </div>
         <input type="file" id="loadPracticeInput" accept=".json" style="display:none" onchange="loadPracticeFromFile(event)"/>
-        <button class="btn sm primary" onclick="saveTraningInit()" title="Spara träningen"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M6.5 2.5v8M2.5 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Spara träning</button>
+        <button class="btn sm primary" onclick="savePracticeInit()" title="Spara träningen"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M6.5 2.5v8M2.5 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Spara träning</button>
       </div>
-      <div class="traning-band-right">
+      <div class="practice-band-right">
         <button class="btn-icon-band" id="textOutputBtn" onclick="showTextOutput()" disabled title="Kopiera text">
           <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2" y="1" width="9" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="4" y="3.5" width="5" height="1.1" rx="0.55" fill="currentColor"/><rect x="4" y="5.8" width="5" height="1.1" rx="0.55" fill="currentColor"/><rect x="4" y="8.1" width="3" height="1.1" rx="0.55" fill="currentColor"/><rect x="8" y="7.5" width="5" height="5" rx="1" fill="var(--surface)"/><rect x="8" y="7.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><line x1="9.2" y1="10" x2="11.8" y2="10" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
         </button>
@@ -400,7 +400,7 @@ input:focus,select:focus{border-color:var(--accent);}
   <div id="top-plan">
     <div class="sub-tabs">
       <button class="sub-tab active" onclick="switchSubTab('attendance')">Närvaro</button>
-      <button class="sub-tab" onclick="switchSubTab('traning')">Upplägg</button>
+      <button class="sub-tab" onclick="switchSubTab('practice')">Upplägg</button>
       <button class="sub-tab" onclick="switchSubTab('groups')">Grupper</button>
     </div>
 
@@ -531,12 +531,12 @@ input:focus,select:focus{border-color:var(--accent);}
       <div id="groupsArea"><div class="empty-state">Markera närvaro först, generera sedan grupper.</div></div>
     </div>
     <!-- UPPLÄGG (sub-tab) -->
-    <div id="sub-traning" style="display:none;">
+    <div id="sub-practice" style="display:none;">
 
     <!-- Upplägg-band: spara/ladda upplägg -->
-    <div class="upplägg-band">
-      <button class="btn sm" onclick="loadUpplagg()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M6.5 10.5V2.5M2.5 6.5L6.5 2.5l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Ladda upplägg</button>
-      <button class="btn sm primary" onclick="saveUpplaggInit()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M6.5 2.5v8M2.5 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Spara upplägg</button>
+    <div class="template-band">
+      <button class="btn sm" onclick="loadTemplate()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M6.5 10.5V2.5M2.5 6.5L6.5 2.5l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Ladda upplägg</button>
+      <button class="btn sm primary" onclick="saveTemplateInit()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M6.5 2.5v8M2.5 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Spara upplägg</button>
     </div>
 
     <!-- Träningsbild -->
@@ -673,14 +673,14 @@ input:focus,select:focus{border-color:var(--accent);}
 </div>
 
 <!-- Ny träning modal -->
-<div class="modal-overlay" id="nyTraningModal">
+<div class="modal-overlay" id="newPracticeModal">
   <div class="modal" style="max-width:420px;">
     <h2>Ny träning</h2>
     <p>Vill du spara den aktuella träningen innan du nollställer?</p>
     <div class="modal-actions" style="justify-content:stretch;flex-direction:column;gap:10px;">
-      <button class="btn primary" style="width:100%;height:40px;" onclick="nyTraningSpara()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M6.5 2.5v8M2.5 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Spara &amp; nollställ</button>
-      <button class="btn" style="width:100%;height:40px;" onclick="nyTraningRensa()">Nollställ utan att spara</button>
-      <button class="btn" style="width:100%;height:40px;color:var(--text-muted);" onclick="closeModal('nyTraningModal')">Avbryt</button>
+      <button class="btn primary" style="width:100%;height:40px;" onclick="newPracticeSave()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M6.5 2.5v8M2.5 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Spara &amp; nollställ</button>
+      <button class="btn" style="width:100%;height:40px;" onclick="newPracticeClear()">Nollställ utan att spara</button>
+      <button class="btn" style="width:100%;height:40px;color:var(--text-muted);" onclick="closeModal('newPracticeModal')">Avbryt</button>
     </div>
   </div>
 </div>
@@ -692,12 +692,12 @@ input:focus,select:focus{border-color:var(--accent);}
     <p>Ge träningen ett namn så du enkelt kan känna igen den senare.</p>
     <div style="margin-bottom:1rem;">
       <label style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Namn</label>
-      <input type="text" id="saveTraningNameInput" placeholder="T.ex. Träning v16 tisdag" style="width:100%;"/>
+      <input type="text" id="savePracticeNameInput" placeholder="T.ex. Träning v16 tisdag" style="width:100%;"/>
     </div>
     <div class="modal-actions" style="flex-direction:column;gap:8px;">
-      <button class="btn primary" style="width:100%;height:40px;" onclick="saveTraningLocal()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><rect x="2" y="1.5" width="9" height="10" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="4.5" y="1.5" width="4" height="3" rx="0.5" stroke="currentColor" stroke-width="1.2"/><rect x="3.5" y="7" width="6" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/></svg> Spara lokalt</button>
-      <button class="btn" style="width:100%;height:40px;" id="saveTraningDriveBtn" onclick="saveTraningDrive()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M3.5 10a2.5 2.5 0 0 1 0-5 3 3 0 0 1 5.7-.8A2 2 0 1 1 10.5 8.5H3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M6.5 10v2M5 11.5l1.5 1 1.5-1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Spara till Drive</button>
-      <button class="btn" style="width:100%;height:40px;" onclick="saveTraningDevice()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M6.5 2.5v8M2.5 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Ladda ner till enhet</button>
+      <button class="btn primary" style="width:100%;height:40px;" onclick="savePracticeLocal()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><rect x="2" y="1.5" width="9" height="10" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="4.5" y="1.5" width="4" height="3" rx="0.5" stroke="currentColor" stroke-width="1.2"/><rect x="3.5" y="7" width="6" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/></svg> Spara lokalt</button>
+      <button class="btn" style="width:100%;height:40px;" id="savePracticeDriveBtn" onclick="savePracticeDrive()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M3.5 10a2.5 2.5 0 0 1 0-5 3 3 0 0 1 5.7-.8A2 2 0 1 1 10.5 8.5H3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M6.5 10v2M5 11.5l1.5 1 1.5-1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Spara till Drive</button>
+      <button class="btn" style="width:100%;height:40px;" onclick="savePracticeDevice()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M6.5 2.5v8M2.5 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Ladda ner till enhet</button>
       <button class="btn" onclick="closeModal('saveTraningModal')">Avbryt</button>
     </div>
   </div>
@@ -708,7 +708,7 @@ input:focus,select:focus{border-color:var(--accent);}
   <div class="modal" style="max-width:480px;">
     <h2>Ladda träning</h2>
     <p>Välj en träning att ladda.</p>
-    <div id="traningFileList"><div class="drive-empty">Inga sparade träningar hittades.</div></div>
+    <div id="practiceFileList"><div class="drive-empty">Inga sparade träningar hittades.</div></div>
     <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
       <button class="btn" onclick="document.getElementById('loadPracticeInput').click()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M1.5 4A1 1 0 0 1 2.5 3h2.8l1.2 1.5H10.5A1 1 0 0 1 11.5 5.5v4.5A1 1 0 0 1 10.5 11h-8A1 1 0 0 1 1.5 10z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg> Välj fil från enhet</button>
       <button class="btn" onclick="closeModal('loadTraningModal')">Stäng</button>
@@ -817,24 +817,24 @@ input:focus,select:focus{border-color:var(--accent);}
     <p>Ge upplägget ett namn så du enkelt kan känna igen det senare.</p>
     <div style="margin-bottom:1rem;">
       <label style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Namn</label>
-      <input type="text" id="upplaggNameInput" placeholder="T.ex. Powerplay v16" style="width:100%;"/>
+      <input type="text" id="templateNameInput" placeholder="T.ex. Powerplay v16" style="width:100%;"/>
     </div>
     <div class="modal-actions" style="flex-direction:column;gap:8px;">
-      <button class="btn primary" style="width:100%;height:40px;" onclick="saveUpplaggLocal()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><rect x="2" y="1.5" width="9" height="10" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="4.5" y="1.5" width="4" height="3" rx="0.5" stroke="currentColor" stroke-width="1.2"/><rect x="3.5" y="7" width="6" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/></svg> Spara lokalt</button>
-      <button class="btn" style="width:100%;height:40px;" id="saveUpplaggDriveBtn" onclick="saveUpplaggDrive()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M3.5 10a2.5 2.5 0 0 1 0-5 3 3 0 0 1 5.7-.8A2 2 0 1 1 10.5 8.5H3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M6.5 10v2M5 11.5l1.5 1 1.5-1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Spara till Drive</button>
+      <button class="btn primary" style="width:100%;height:40px;" onclick="saveTemplateLocal()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><rect x="2" y="1.5" width="9" height="10" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="4.5" y="1.5" width="4" height="3" rx="0.5" stroke="currentColor" stroke-width="1.2"/><rect x="3.5" y="7" width="6" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/></svg> Spara lokalt</button>
+      <button class="btn" style="width:100%;height:40px;" id="saveTemplateDriveBtn" onclick="saveTemplateDrive()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline-block;vertical-align:middle;pointer-events:none;"><path d="M3.5 10a2.5 2.5 0 0 1 0-5 3 3 0 0 1 5.7-.8A2 2 0 1 1 10.5 8.5H3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M6.5 10v2M5 11.5l1.5 1 1.5-1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Spara till Drive</button>
       <button class="btn" onclick="closeModal('saveUpplaggModal')">Avbryt</button>
     </div>
   </div>
 </div>
 
 <!-- Ladda upplägg modal -->
-<div class="modal-overlay" id="loadUpplaggModal">
+<div class="modal-overlay" id="loadTemplateModal">
   <div class="modal" style="max-width:480px;">
     <h2>Ladda upplägg</h2>
     <p>Välj ett upplägg att ladda. Stationer och träningsbild ersätts — närvaro och grupper påverkas inte.</p>
-    <div id="upplaggFileList"><div class="drive-empty">Inga sparade upplägg hittades.</div></div>
+    <div id="templateFileList"><div class="drive-empty">Inga sparade upplägg hittades.</div></div>
     <div class="modal-actions">
-      <button class="btn" onclick="closeModal('loadUpplaggModal')">Stäng</button>
+      <button class="btn" onclick="closeModal('loadTemplateModal')">Stäng</button>
     </div>
   </div>
 </div>
@@ -858,7 +858,7 @@ let practiceImageData=null; // base64 data URL of uploaded practice image
 let usePositions=false; // global toggle: show/use player positions
 const STORAGE_KEY='hockey-planner-v5';
 
-// Fixed stations always present (Off-ice, Målvaktstränare) + dynamic numbered stations
+// Fixed stations always present (Off-ice, Goalie coach) + dynamic numbered stations
 const FIXED_STATIONS=[
   {label:'Off-ice',         hasDrill:false},
   {label:'Målvaktstränare', hasDrill:false},
@@ -902,7 +902,7 @@ function normalizeCoach(c){return{id:uid(),name:c.name,coachType:c.coachType||'o
 function debounce(fn,ms){let t;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),ms);};}
 const scheduleSave=debounce(save,250);
 
-// ── Träningsbild ──────────────────────────────────────────────────────
+// ── Practice image ──────────────────────────────────────────────────────
 function practiceImageSelected(e){
   const file=e.target.files[0]; if(!file)return;
   const reader=new FileReader();
@@ -1020,7 +1020,7 @@ function switchTopTab(t){
   document.getElementById('top-plan').style.display=t==='plan'?'':'none';
   document.getElementById('top-roster').style.display=t==='roster'?'':'none';
   document.getElementById('top-settings').style.display=t==='settings'?'':'none';
-  document.getElementById('traningBand').style.display=t==='plan'?'':'none';
+  document.getElementById('practiceBand').style.display=t==='plan'?'':'none';
   document.querySelectorAll('.top-tab').forEach((el,i)=>el.classList.toggle('active',['plan','roster','settings'][i]===t));
   if(t==='plan'&&currentSub==='attendance')renderAttendance();
   if(t==='settings')openSettingsTab();
@@ -1028,11 +1028,11 @@ function switchTopTab(t){
 function switchSubTab(t){
   currentSub=t;
   document.getElementById('sub-attendance').style.display=t==='attendance'?'':'none';
-  document.getElementById('sub-traning').style.display=t==='traning'?'':'none';
+  document.getElementById('sub-practice').style.display=t==='practice'?'':'none';
   document.getElementById('sub-groups').style.display=t==='groups'?'':'none';
-  document.querySelectorAll('.sub-tab').forEach((el,i)=>el.classList.toggle('active',['attendance','traning','groups'][i]===t));
+  document.querySelectorAll('.sub-tab').forEach((el,i)=>el.classList.toggle('active',['attendance','practice','groups'][i]===t));
   if(t==='attendance')renderAttendance();
-  if(t==='traning')renderStationer();
+  if(t==='practice')renderStations();
   if(t==='groups'){renderGroupsInfo();if(groups.length)renderGroups();renderGoaliePanel();}
 }
 
@@ -1123,7 +1123,7 @@ function sortByAttendance(type){
 }
 
 // ── Stationer ──────────────────────────────────────────────────────────
-function renderStationer(){
+function renderStations(){
   const coachesIn=coaches.filter(c=>c.attendance==='yes');
   const rows=document.getElementById('stationRows');
   if(!rows)return;
@@ -1175,7 +1175,7 @@ function addStation(){
     const prev=allData.find(d=>d.label===s.label);
     if(prev){s.drill=prev.drill;s.coaches=prev.coaches;}
   });
-  save();renderStationer();
+  save();renderStations();
 }
 function removeStation(){
   if(numStations<=1)return;
@@ -1187,7 +1187,7 @@ function removeStation(){
     const prev=allData.find(d=>d.label===s.label);
     if(prev){s.drill=prev.drill;s.coaches=prev.coaches;}
   });
-  save();renderStationer();
+  save();renderStations();
 }
 
 function addCoachToStationSelect(sel){
@@ -1197,7 +1197,7 @@ function addCoachToStationSelect(sel){
   if(!stations[si].coaches.includes(cid)&&!stations[si].coaches.map(String).includes(String(cid)))
     stations[si].coaches.push(String(cid));
   sel.value='';
-  save();renderStationer();
+  save();renderStations();
 }
 function stationDrillChange(input){
   const si=parseInt(input.dataset.si,10);
@@ -1211,7 +1211,7 @@ function stationDrillBlur(input){
 }
 function removeCoachFromStation(si,cid){
   stations[si].coaches=stations[si].coaches.filter(id=>String(id)!==String(cid));
-  save();renderStationer();
+  save();renderStations();
 }
 function removeCoachFromStationBtn(e){
   const btn=e.currentTarget;
@@ -1286,7 +1286,7 @@ function attHTML(type,id,att){
 }
 function attBtnClick(btn){setAtt(btn.dataset.type, btn.dataset.id, btn.dataset.val);}
 
-// ── Sorteringshjälpare ────────────────────────────────────────────────
+// ── Sort helpers ────────────────────────────────────────────────
 function coachTypeOrder(t){return t==='on-ice'?0:t==='off-ice'?1:2;}
 function attOrder(a){return a==='yes'?0:a==='unknown'?1:2;}
 function sortedPlayers(){
@@ -1622,7 +1622,7 @@ function generateGroups(){
     if(method==='level')groups=shuffle(groups);
   }
 
-  // Historik + håll isär — swap-pass
+  // History + keep apart — swap pass
   const useHistory=document.getElementById('groupUseHistory')?.checked||false;
   const pairScores=buildPairScores(useHistory);
   const hasScores=Object.keys(pairScores).length>0;
@@ -1637,7 +1637,7 @@ function generateGroups(){
   const addGroupBtn=document.getElementById('addGroupBtn');
   if(addGroupBtn)addGroupBtn.style.display='';
   save();
-  renderStationer();
+  renderStations();
   renderGoaliePanel();
   renderGroups();
 }
@@ -1719,7 +1719,7 @@ function clearGroups(){
   if(addGroupBtn)addGroupBtn.style.display='none';
   save();
   renderGoaliePanel();
-  renderStationer();
+  renderStations();
 }
 
 // ── Long-press action sheet (mobil) ──────────────────────────────────
@@ -1745,7 +1745,7 @@ function moveLongPress(e){
   if(!_pressTimer)return;
   const t=e.touches[0];
   const dx=t.clientX-_pressStartX,dy=t.clientY-_pressStartY;
-  if(dx*dx+dy*dy>64)cancelLongPress(); // avbryt om >8px rörelse
+  if(dx*dx+dy*dy>64)cancelLongPress(); // cancel if >8px movement
 }
 function cancelLongPress(){
   if(_pressTimer){clearTimeout(_pressTimer);_pressTimer=null;}
@@ -2374,16 +2374,16 @@ function buildPracticeCardHTML(){
   return html;
 }
 
-// ── Ny träning ────────────────────────────────────────────────────────
-function nyTraning(){
-  openModal('nyTraningModal');
+// ── New practice ────────────────────────────────────────────────────────
+function newPractice(){
+  openModal('newPracticeModal');
 }
-function nyTraningSpara(){
-  closeModal('nyTraningModal');
-  saveTraningInit();
+function newPracticeSave(){
+  closeModal('newPracticeModal');
+  savePracticeInit();
 }
-function nyTraningRensa(){
-  closeModal('nyTraningModal');
+function newPracticeClear(){
+  closeModal('newPracticeModal');
   // Reset attendance → unknown (except injured/longterm → no), remove guests
   players=players.filter(p=>!p.guest);
   players.forEach(p=>{p.attendance=(p.status==='injured'||p.status==='longterm')?'no':'unknown';p.practicePosition=null;});
@@ -2406,11 +2406,11 @@ function nyTraningRensa(){
   save();
   renderAll();
   renderAttendance();
-  renderStationer();
+  renderStations();
   showBanner('Träningen är nollställd. Truppen är kvar.','var(--on-bg)','var(--on-txt)');
 }
 
-// ── Spara/ladda träning (manuell snapshot) ────────────────────────────
+// ── Save/load practice (manual snapshot) ────────────────────────────
 async function savePracticeFile(){
   const practiceDate=document.getElementById('practiceDate')?.value||new Date().toISOString().slice(0,10);
   const dateStr=getDateStr().replace(/\s/g,'-');
@@ -2483,10 +2483,10 @@ function loadPracticeFromFile(evt){
   reader.readAsText(file);evt.target.value='';
 }
 
-// ── Spara & ladda träning ─────────────────────────────────────────────
-const TRANING_STORAGE_KEY='hhc-traning-list'; // [{name, date, data}]
+// ── Save & load practice ─────────────────────────────────────────────
+const PRACTICE_STORAGE_KEY='hhc-traning-list'; // [{name, date, data}]
 
-function getTraningData(){
+function getPracticeData(){
   const practiceDate=document.getElementById('practiceDate')?.value||new Date().toISOString().slice(0,10);
   return{
     version:5, savedAt:new Date().toISOString(), practiceDate, numStations, usePositions,
@@ -2502,37 +2502,37 @@ function getTraningData(){
   };
 }
 
-function saveTraningInit(){
+function savePracticeInit(){
   const date=document.getElementById('practiceDate')?.value||new Date().toISOString().slice(0,10);
-  document.getElementById('saveTraningNameInput').value=date;
-  const driveBtn=document.getElementById('saveTraningDriveBtn');
+  document.getElementById('savePracticeNameInput').value=date;
+  const driveBtn=document.getElementById('savePracticeDriveBtn');
   if(driveBtn)driveBtn.disabled=!driveAccessToken;
   openModal('saveTraningModal');
-  setTimeout(()=>{const inp=document.getElementById('saveTraningNameInput');if(inp)inp.select();},100);
+  setTimeout(()=>{const inp=document.getElementById('savePracticeNameInput');if(inp)inp.select();},100);
 }
 
-function saveTraningLocal(){
-  const name=document.getElementById('saveTraningNameInput').value.trim();
+function savePracticeLocal(){
+  const name=document.getElementById('savePracticeNameInput').value.trim();
   if(!name){showBanner('Ange ett namn','var(--warn-bg)','var(--warn-txt)');return;}
-  const list=JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
-  list.unshift({name,date:new Date().toISOString(),data:getTraningData()});
+  const list=JSON.parse(localStorage.getItem(PRACTICE_STORAGE_KEY)||'[]');
+  list.unshift({name,date:new Date().toISOString(),data:getPracticeData()});
   if(list.length>15)list.length=15;
-  localStorage.setItem(TRANING_STORAGE_KEY,JSON.stringify(list));
+  localStorage.setItem(PRACTICE_STORAGE_KEY,JSON.stringify(list));
   closeModal('saveTraningModal');
   showBanner('Träning "'+name+'" sparad lokalt','var(--on-bg)','var(--on-txt)');
 }
 
-async function saveTraningDrive(){
+async function savePracticeDrive(){
   if(!driveAccessToken){showBanner('Logga in på Drive först','var(--warn-bg)','var(--warn-txt)');return;}
-  const name=document.getElementById('saveTraningNameInput').value.trim();
+  const name=document.getElementById('savePracticeNameInput').value.trim();
   if(!name){showBanner('Ange ett namn','var(--warn-bg)','var(--warn-txt)');return;}
   const safe=name.replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'').trim()||'traning';
   const ts=new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
   const filename=`traning-${safe}-${ts}.json`;
-  const btn=document.getElementById('saveTraningDriveBtn');
+  const btn=document.getElementById('savePracticeDriveBtn');
   if(btn){btn.disabled=true;btn.textContent='Sparar...';}
   try{
-    await driveSaveFile(filename,{name,...getTraningData()});
+    await driveSaveFile(filename,{name,...getPracticeData()});
     closeModal('saveTraningModal');
     showBanner('Träning "'+name+'" sparad till Drive','var(--on-bg)','var(--on-txt)');
   }catch(e){
@@ -2542,20 +2542,20 @@ async function saveTraningDrive(){
   }
 }
 
-function saveTraningDevice(){
-  const name=document.getElementById('saveTraningNameInput').value.trim()||'traning';
+function savePracticeDevice(){
+  const name=document.getElementById('savePracticeNameInput').value.trim()||'traning';
   const safe=name.replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'-').trim();
   const filename=safe+'.json';
-  const blob=new Blob([JSON.stringify(getTraningData(),null,2)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify(getPracticeData(),null,2)],{type:'application/json'});
   fallbackDownloadJSON(blob,filename);
   closeModal('saveTraningModal');
   showBanner('Träning nedladdad: '+filename,'var(--on-bg)','var(--on-txt)');
 }
 
-// ── Lista-hjälpare: lokalt med radera, Drive med paginering ──────────
-const PAGE_SIZE_TRANING=5;
+// ── List helpers: local with delete, Drive with pagination ──────────
+const PAGE_SIZE_PRACTICE=5;
 const PAGE_SIZE_ROSTER=5;
-const PAGE_SIZE_UPPLAGG=10;
+const PAGE_SIZE_TEMPLATE=10;
 
 function localListHTML(list,loadFn,downloadFn,deleteFn){
   if(!list.length)return'';
@@ -2621,11 +2621,11 @@ function initDriveList(containerId,files,nameFn,clickFn,pageSize=10){
 }
 
 // ── Delete local items ────────────────────────────────────────────────
-function deleteTraningItem(index){
-  const list=JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
+function deletePracticeItem(index){
+  const list=JSON.parse(localStorage.getItem(PRACTICE_STORAGE_KEY)||'[]');
   list.splice(index,1);
-  localStorage.setItem(TRANING_STORAGE_KEY,JSON.stringify(list));
-  loadTraningInit(list);
+  localStorage.setItem(PRACTICE_STORAGE_KEY,JSON.stringify(list));
+  loadPracticeInit(list);
 }
 function deleteRosterItem(index){
   const list=JSON.parse(localStorage.getItem(ROSTER_STORAGE_KEY)||'[]');
@@ -2633,60 +2633,60 @@ function deleteRosterItem(index){
   localStorage.setItem(ROSTER_STORAGE_KEY,JSON.stringify(list));
   loadRosterInit(list);
 }
-function deleteUpplaggItem(index){
-  const list=JSON.parse(localStorage.getItem(UPPLAGG_STORAGE_KEY)||'[]');
+function deleteTemplateItem(index){
+  const list=JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY)||'[]');
   list.splice(index,1);
-  localStorage.setItem(UPPLAGG_STORAGE_KEY,JSON.stringify(list));
-  loadUpplagg(list);
+  localStorage.setItem(TEMPLATE_STORAGE_KEY,JSON.stringify(list));
+  loadTemplate(list);
 }
 
-async function loadTraningInit(cachedList){
-  const list=cachedList||JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
+async function loadPracticeInit(cachedList){
+  const list=cachedList||JSON.parse(localStorage.getItem(PRACTICE_STORAGE_KEY)||'[]');
   let html='';
   if(list.length){
     html+=`<div class="drive-section-title" style="margin-top:0;">Lokalt sparade</div><div class="drive-file-list">`;
-    html+=localListHTML(list,'applyTraning','downloadTraningItem','deleteTraningItem');
+    html+=localListHTML(list,'applyPractice','downloadPracticeItem','deletePracticeItem');
     html+=`</div>`;
   }
   if(driveAccessToken&&driveFolderId){
-    html+=`<div class="drive-section-title" style="margin-top:12px;">Drive</div><div id="traningDriveList"><div class="drive-empty">Hämtar...</div></div>`;
+    html+=`<div class="drive-section-title" style="margin-top:12px;">Drive</div><div id="practiceDriveList"><div class="drive-empty">Hämtar...</div></div>`;
   } else if(!driveAccessToken){
     html+=`<p style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-top:10px;">Logga in på Drive för att se Drive-sparade träningar.</p>`;
   }
   if(!list.length&&!driveAccessToken)html='<div class="drive-empty">Inga sparade träningar hittades.</div>';
-  document.getElementById('traningFileList').innerHTML=html||'<div class="drive-empty">Inga sparade träningar hittades.</div>';
+  document.getElementById('practiceFileList').innerHTML=html||'<div class="drive-empty">Inga sparade träningar hittades.</div>';
   openModal('loadTraningModal');
   if(driveAccessToken&&driveFolderId){
     try{
       const files=await driveListFiles('traning-');
-      const el=document.getElementById('traningDriveList');if(!el)return;
+      const el=document.getElementById('practiceDriveList');if(!el)return;
       if(!files.length){el.innerHTML='<div class="drive-empty">Inga Drive-träningar hittades.</div>';return;}
       const nameFn=n=>n.replace(/^traning-/,'').replace(/\.json$/,'').replace(/-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$/,'').replace(/-/g,' ')||n;
-      el.innerHTML=driveListHTML(files,nameFn,'applyTraningDrive','traningDriveList',0);
-      initDriveList('traningDriveList',files,nameFn,'applyTraningDrive',PAGE_SIZE_TRANING);
+      el.innerHTML=driveListHTML(files,nameFn,'applyPracticeDrive','practiceDriveList',0);
+      initDriveList('practiceDriveList',files,nameFn,'applyPracticeDrive',PAGE_SIZE_PRACTICE);
     }catch(e){
-      const el=document.getElementById('traningDriveList');
+      const el=document.getElementById('practiceDriveList');
       if(el)el.innerHTML='<div class="drive-empty">Kunde inte hämta från Drive.</div>';
     }
   }
 }
 
-function applyTraning(index){
-  const list=JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
+function applyPractice(index){
+  const list=JSON.parse(localStorage.getItem(PRACTICE_STORAGE_KEY)||'[]');
   const item=list[index];if(!item)return;
   loadPracticeData(item.data,item.name);
   closeModal('loadTraningModal');
 }
 
-function downloadTraningItem(index){
-  const list=JSON.parse(localStorage.getItem(TRANING_STORAGE_KEY)||'[]');
+function downloadPracticeItem(index){
+  const list=JSON.parse(localStorage.getItem(PRACTICE_STORAGE_KEY)||'[]');
   const item=list[index];if(!item)return;
   const safe=(item.name||'traning').replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'-');
   const blob=new Blob([JSON.stringify(item.data,null,2)],{type:'application/json'});
   fallbackDownloadJSON(blob,safe+'.json');
 }
 
-async function applyTraningDrive(fileId){
+async function applyPracticeDrive(fileId){
   try{
     const d=await driveLoadFile(fileId);
     loadPracticeData(d,d.name||'Drive-träning');
@@ -2739,7 +2739,7 @@ function loadPracticeData(d,name){
   else clearPracticeImage();
   save();renderAll();
   if(groups.length){document.getElementById('textOutputBtn').disabled=false;document.getElementById('cardOutputBtn').disabled=false;const ab=document.getElementById('addGroupBtn');if(ab)ab.style.display='';}
-  renderStationer();
+  renderStations();
   showBanner('Träning "'+name+'" laddad','var(--on-bg)','var(--on-txt)');
 }
 
@@ -2869,10 +2869,10 @@ function loadRosterData(d,name){
   });
 }
 
-// ── Upplägg: spara & ladda ────────────────────────────────────────────
-const UPPLAGG_STORAGE_KEY='hhc-upplagg-list'; // [{name, date, data}]
+// ── Template: save & load ────────────────────────────────────────────
+const TEMPLATE_STORAGE_KEY='hhc-upplagg-list'; // [{name, date, data}]
 
-function getUpplaggData(){
+function getTemplateData(){
   return{
     numStations,
     stations:stations.map(({label,drill,fixed,hasDrill})=>({label,drill,fixed,hasDrill})),
@@ -2880,41 +2880,41 @@ function getUpplaggData(){
   };
 }
 
-function saveUpplaggInit(){
+function saveTemplateInit(){
   const today=new Date().toLocaleDateString('sv-SE');
-  document.getElementById('upplaggNameInput').value=today;
-  const driveBtn=document.getElementById('saveUpplaggDriveBtn');
+  document.getElementById('templateNameInput').value=today;
+  const driveBtn=document.getElementById('saveTemplateDriveBtn');
   if(driveBtn)driveBtn.disabled=!driveAccessToken;
   openModal('saveUpplaggModal');
   setTimeout(()=>{
-    const inp=document.getElementById('upplaggNameInput');
+    const inp=document.getElementById('templateNameInput');
     if(inp){inp.select();}
   },100);
 }
 
-function saveUpplaggLocal(){
-  const name=document.getElementById('upplaggNameInput').value.trim();
+function saveTemplateLocal(){
+  const name=document.getElementById('templateNameInput').value.trim();
   if(!name){showBanner('Ange ett namn','var(--warn-bg)','var(--warn-txt)');return;}
-  const list=JSON.parse(localStorage.getItem(UPPLAGG_STORAGE_KEY)||'[]');
-  list.unshift({name,date:new Date().toISOString(),data:getUpplaggData()});
+  const list=JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY)||'[]');
+  list.unshift({name,date:new Date().toISOString(),data:getTemplateData()});
   // Keep max 20
   if(list.length>15)list.length=15;
-  localStorage.setItem(UPPLAGG_STORAGE_KEY,JSON.stringify(list));
+  localStorage.setItem(TEMPLATE_STORAGE_KEY,JSON.stringify(list));
   closeModal('saveUpplaggModal');
   showBanner('Upplägg "'+name+'" sparat lokalt','var(--on-bg)','var(--on-txt)');
 }
 
-async function saveUpplaggDrive(){
+async function saveTemplateDrive(){
   if(!driveAccessToken){showBanner('Logga in på Drive först','var(--warn-bg)','var(--warn-txt)');return;}
-  const name=document.getElementById('upplaggNameInput').value.trim();
+  const name=document.getElementById('templateNameInput').value.trim();
   if(!name){showBanner('Ange ett namn','var(--warn-bg)','var(--warn-txt)');return;}
   const safe=name.replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'').trim()||'upplägg';
   const ts=new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
   const filename=`upplägg-${safe}-${ts}.json`;
-  const btn=document.getElementById('saveUpplaggDriveBtn');
+  const btn=document.getElementById('saveTemplateDriveBtn');
   if(btn){btn.disabled=true;btn.textContent='Sparar...';}
   try{
-    await driveSaveFile(filename,{name,...getUpplaggData()});
+    await driveSaveFile(filename,{name,...getTemplateData()});
     closeModal('saveUpplaggModal');
     showBanner('Upplägg "'+name+'" sparat till Drive','var(--on-bg)','var(--on-txt)');
   }catch(e){
@@ -2924,65 +2924,65 @@ async function saveUpplaggDrive(){
   }
 }
 
-async function loadUpplagg(cachedList){
-  const list=cachedList||JSON.parse(localStorage.getItem(UPPLAGG_STORAGE_KEY)||'[]');
+async function loadTemplate(cachedList){
+  const list=cachedList||JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY)||'[]');
   let html='';
   if(list.length){
     html+=`<div class="drive-section-title" style="margin-top:0;">Lokalt sparade</div>`;
     html+=`<div class="drive-file-list">`;
-    html+=localListHTML(list,'applyUpplagg','downloadUpplaggItem','deleteUpplaggItem');
+    html+=localListHTML(list,'applyTemplate','downloadTemplateItem','deleteTemplateItem');
     html+=`</div>`;
   }
   if(driveAccessToken&&driveFolderId){
     html+=`<div class="drive-section-title" style="margin-top:12px;">Drive</div>`;
-    html+=`<div id="upplaggDriveList"><div class="drive-empty">Hämtar...</div></div>`;
+    html+=`<div id="templateDriveList"><div class="drive-empty">Hämtar...</div></div>`;
   } else if(!driveAccessToken){
     html+=`<p style="font-size:12px;color:var(--text-muted);font-family:'Helvetica Neue',sans-serif;margin-top:10px;">Logga in på Drive för att se Drive-sparade upplägg.</p>`;
   }
   if(!list.length&&!driveAccessToken)html='<div class="drive-empty">Inga sparade upplägg hittades.</div>';
-  document.getElementById('upplaggFileList').innerHTML=html||'<div class="drive-empty">Inga sparade upplägg hittades.</div>';
-  openModal('loadUpplaggModal');
+  document.getElementById('templateFileList').innerHTML=html||'<div class="drive-empty">Inga sparade upplägg hittades.</div>';
+  openModal('loadTemplateModal');
   if(driveAccessToken&&driveFolderId){
     try{
       const files=await driveListFiles('upplägg-');
-      const driveEl=document.getElementById('upplaggDriveList');
+      const driveEl=document.getElementById('templateDriveList');
       if(!driveEl)return;
       if(!files.length){driveEl.innerHTML='<div class="drive-empty">Inga Drive-upplägg hittades.</div>';return;}
       const nameFn=n=>n.replace(/^upplägg-/,'').replace(/-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.json$/,'').replace(/_/g,' ')||n;
-      initDriveList('upplaggDriveList',files,nameFn,'applyUpplaggDrive',PAGE_SIZE_UPPLAGG);
+      initDriveList('templateDriveList',files,nameFn,'applyTemplateDrive',PAGE_SIZE_TEMPLATE);
     }catch(e){
-      const driveEl=document.getElementById('upplaggDriveList');
+      const driveEl=document.getElementById('templateDriveList');
       if(driveEl)driveEl.innerHTML=`<div class="drive-empty">Kunde inte hämta från Drive.</div>`;
     }
   }
 }
 
-function applyUpplagg(index){
-  const list=JSON.parse(localStorage.getItem(UPPLAGG_STORAGE_KEY)||'[]');
+function applyTemplate(index){
+  const list=JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY)||'[]');
   const item=list[index];
   if(!item)return;
-  doApplyUpplagg(item.data,item.name);
-  closeModal('loadUpplaggModal');
+  doApplyTemplate(item.data,item.name);
+  closeModal('loadTemplateModal');
 }
-function downloadUpplaggItem(index){
-  const list=JSON.parse(localStorage.getItem(UPPLAGG_STORAGE_KEY)||'[]');
+function downloadTemplateItem(index){
+  const list=JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY)||'[]');
   const item=list[index];if(!item)return;
   const safe=(item.name||'upplägg').replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,'-');
   const blob=new Blob([JSON.stringify(item.data,null,2)],{type:'application/json'});
   fallbackDownloadJSON(blob,safe+'.json');
 }
 
-async function applyUpplaggDrive(fileId){
+async function applyTemplateDrive(fileId){
   try{
     const d=await driveLoadFile(fileId);
-    doApplyUpplagg(d,d.name||'Drive-upplägg');
-    closeModal('loadUpplaggModal');
+    doApplyTemplate(d,d.name||'Drive-upplägg');
+    closeModal('loadTemplateModal');
   }catch(e){
     showBanner('Kunde inte ladda upplägg: '+e.message,'var(--danger-bg)','var(--danger-txt)');
   }
 }
 
-function doApplyUpplagg(d,name){
+function doApplyTemplate(d,name){
   if(d.numStations){numStations=d.numStations;stations=makeStations();}
   if(d.stations)d.stations.forEach((ds,i)=>{
     if(!stations[i])return;
@@ -2994,7 +2994,7 @@ function doApplyUpplagg(d,name){
   } else {
     clearPracticeImage();
   }
-  save();renderStationer();
+  save();renderStations();
   showBanner('Upplägg "'+name+'" laddat','var(--on-bg)','var(--on-txt)');
 }
 
@@ -3037,7 +3037,7 @@ function toggleDrillHistory(e,si){
 
 function pickDrillHistory(si,drill){
   stations[si].drill=drill;
-  save();renderStationer();
+  save();renderStations();
 }
 
 // Hook into save to record drill history
@@ -3103,7 +3103,7 @@ function showBanner(text,bg,col){
   b.textContent=text;document.querySelector('.top-tabs').after(b);setTimeout(()=>b.remove(),4000);
 }
 
-// ── Ladda trupp-bekräftelse ───────────────────────────────────────────
+// ── Load roster confirmation ───────────────────────────────────────────
 let _pendingRosterData=null;
 let _pendingRosterName=null;
 function loadRosterConfirm(newP, newC, name, applyFn){
@@ -3121,7 +3121,7 @@ function loadRosterConfirmDo(action){
   _pendingRosterData=null;
 }
 
-// ── Gäster ────────────────────────────────────────────────────────────
+// ── Guests ────────────────────────────────────────────────────────────
 function toggleGuestForm(show){
   document.getElementById('guestFormWrap').style.display=show?'block':'none';
   document.getElementById('addGuestBtn').style.display=show?'none':'flex';
@@ -3146,7 +3146,7 @@ function addGuest(){
   const level=pos==='goalie'?'b':document.getElementById('guestLevel').value;
   const guest={id:uid(),name,number:'',level,attendance:'yes',position:pos,status:'active',guest:true};
   players.push(guest);
-  // Om grupper redan finns — lägg målvakt i målvaktszonen, annars i poolen
+  // If groups exist — place goalie in goalie zone, otherwise in pool
   if(groups.length){
     if(pos==='goalie'){
       if(!goaliesInGroup.includes(guest.id))goaliesInGroup.push(guest.id);
@@ -3167,7 +3167,7 @@ function removeGuest(id){
   save();renderAll();renderAttendance();
 }
 
-// ── Kollapsbar Lägg till-sektion ──────────────────────────────────────
+// ── Collapsible add section ──────────────────────────────────────
 function toggleCollapsible(bodyId, arrowId){
   const body=document.getElementById(bodyId);
   const arrow=document.getElementById(arrowId);
@@ -3177,7 +3177,7 @@ function toggleCollapsible(bodyId, arrowId){
   arrow.classList.toggle('open',!isOpen);
 }
 
-// ── Träningsband-meny ─────────────────────────────────────────────────
+// ── Practice band menu ─────────────────────────────────────────────────
 function toggleBandMenu(e){
   e.stopPropagation();
   const dd=document.getElementById('bandDropdown');
@@ -3214,7 +3214,7 @@ function toggleTheme(){
 applyTheme(getCurrentTheme());
 // Set default date + show training band
 try{document.getElementById('practiceDate').value=new Date().toISOString().slice(0,10);}catch(e){}
-try{document.getElementById('traningBand').style.display='';}catch(e){}
+try{document.getElementById('practiceBand').style.display='';}catch(e){}
 const fromStorage=loadFromStorage();
 renderAll();
 renderAttendance();
@@ -3235,13 +3235,13 @@ if(groups.length){
 }
 if(fromStorage){showBanner('Senaste träningen återställd — '+players.length+' spelare, '+coaches.length+' ledare.','var(--accent-light)','var(--accent-text)');}
 
-// Om truppen är tom — byt till Trupp-fliken och visa banner
+// If roster is empty — switch to Roster tab and show banner
 if(!players.length&&!coaches.length){
   switchTopTab('roster');
   showBanner('Ingen trupp hittades — lägg till spelare och ledare, eller importera en sparad trupp.','var(--warn-bg)','var(--warn-txt)');
 }
 
-// ── Spara träningskort som bild ───────────────────────────────────────
+// ── Save practice card as image ───────────────────────────────────────
 async function saveCardAsImage(){
   const btn=document.getElementById('saveCardBtn');
   const origText=btn.textContent;
@@ -3715,7 +3715,7 @@ async function driveLoadPractice(fileId,filename){
     else clearPracticeImage();
     save();renderAll();
     if(groups.length){document.getElementById('textOutputBtn').disabled=false;document.getElementById('cardOutputBtn').disabled=false;const ab=document.getElementById('addGroupBtn');if(ab)ab.style.display='';}
-    renderStationer();
+    renderStations();
     closeModal('driveModal');
     showBanner('Träning laddad från Drive: '+d.practiceDate,'var(--on-bg)','var(--on-txt)');
   }catch(e){
@@ -3792,7 +3792,7 @@ async function driveLoadRoster(fileId,filename){
 }
 
 
-// ── Inställningar — lösenord ──────────────────────────────────────────
+// ── Settings — password ──────────────────────────────────────────
 const SETTINGS_PWD_KEY='hhc-settings-pwd';
 let _settingsUnlocked=false;
 
@@ -3943,7 +3943,7 @@ function renderSettingsTab(){
 
   const historyHTML=history.length
     ?history.map((snap,i)=>{
-      // Stöd både nytt format {name,jerseyColour} och gammalt format (sträng)
+      // Support both new format {name,jerseyColour} and old format (string)
       const detailRows=snap.groups.map((g,gi)=>{
         const byColour={};
         g.players.forEach(p=>{
@@ -4029,9 +4029,9 @@ function renderSettingsTab(){
 function buildPairScores(useHistory){
   const scores={};
   const key=(a,b)=>[a,b].sort().join('|||');
-  // Håll isär — alltid aktiv, extrem vikt
+  // Keep apart — always active, extreme weight
   getHoldApart().forEach(pair=>{scores[key(pair.player1,pair.player2)]=1000;});
-  // Historik — bara om checkbox är ibockad
+  // History — only if checkbox is checked
   if(useHistory){
     getGroupHistory().forEach(snap=>{
       snap.groups.forEach(g=>{
@@ -4067,13 +4067,13 @@ function applyHistorySwaps(groups,pairScores){
     const ia=Math.floor(Math.random()*gA.length);
     const ib=Math.floor(Math.random()*gB.length);
     const pA=gA[ia],pB=gB[ib];
-    if(pA.level!==pB.level)continue; // bevara nivåbalans
+    if(pA.level!==pB.level)continue; // preserve level balance
     const before=groupPairScore(gA,pairScores)+groupPairScore(gB,pairScores);
     gA[ia]=pB;gB[ib]=pA;
     if(groupPairScore(gA,pairScores)+groupPairScore(gB,pairScores)<before){
-      // behåll bytet
+      // keep the swap
     } else {
-      gA[ia]=pA;gB[ib]=pB; // återställ
+      gA[ia]=pA;gB[ib]=pB; // restore
     }
   }
 }
@@ -4089,7 +4089,7 @@ function applyHoldApartColors(groups){
   const list=getHoldApart();
   if(!list.length)return;
   groups.forEach(g=>{
-    if(g.fullColour)return; // en färg — inget att justera
+    if(g.fullColour)return; // single colour — nothing to adjust
     list.forEach(pair=>{
       const p1=g.players.find(p=>p.name===pair.player1);
       const p2=g.players.find(p=>p.name===pair.player2);
@@ -4099,7 +4099,7 @@ function applyHoldApartColors(groups){
   });
 }
 
-// ── PWA Service Worker (offline-stöd) ────────────────────────────────
+// ── PWA Service Worker (offline support) ────────────────────────────────
 if('serviceWorker' in navigator){
   // Cache-on-fetch strategy: cache every request the first time it's made.
   // This works regardless of the URL (file://, GitHub Pages, localhost etc.)
