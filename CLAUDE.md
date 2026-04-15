@@ -4,7 +4,7 @@
 Ett planeringsverktyg för ishockeytränare att hantera trupp, närvaro och gruppsättning inför en träning. Används i planeringsstadiet, inte under träningen.
 
 ## Teknisk grund
-- Fristående HTML-fil (`hockey-practice-planner.html`), ingen backend, inga beroenden att installera
+- Fristående HTML-fil (`index.html`), ingen backend, inga beroenden att installera
 - All data sparas i `localStorage` under nyckeln `hockey-planner-v5`
 - PWA med inline service worker för offline-stöd
 - Hostad på GitHub Pages: https://mikaeljar.github.io/practiceplanner
@@ -76,6 +76,14 @@ Vid "Ny träning" → `injured`/`longterm` sätts till `attendance: 'no'` istäl
 ### Drill-historik
 Sparas **vid blur** (när man lämnar fältet), inte vid varje tangenttryckning.
 
+### Gruppgenerering — pipeline
+Efter att spelarna fördelats i grupper körs dessa steg i ordning:
+1. `applyHistorySwaps(groups, pairScores)` — viktar bort par som ofta hamnat ihop (körs bara om historik finns)
+2. `enforceHoldApart(groups)` — försöker fysiskt flytta spelare till olika grupper för att separera håll-isär-par. Väljer alltid spelare med flest violations som mover. Nivåprioritet vid byte: samma nivå → ett steg ned → ett steg upp → fortsatt alternerande. Målvakter flyttas aldrig.
+3. `reassignJerseyColors(groups)` — tilldelar tröjfärg baserat på position i `g.players`-arrayen (första halvan = colour, andra halvan = colour2).
+4. `applyHoldApartColors(groups)` — fallback: om ett håll-isär-par ändå hamnat i samma grupp ges de samma tröjfärg (samma "lag"), med rebalansering av övriga.
+5. `balanceJerseyColourLevels(groups)` — byter tröjfärg mellan spelarparen inom varje grupp för att sprida nivåerna jämnare mellan de två färgerna. Låser spelare som är inblandade i håll-isär-par i samma grupp.
+
 ---
 
 ## localStorage-nycklar
@@ -104,6 +112,7 @@ Drive-token sparas i `sessionStorage` (försvinner när fliken stängs).
 - **Närvaro** — markera Ja/Nej/Okänd per spelare och ledare. "+ Lägg till gäst"-knapp under sammanfattningsraden.
 - **Upplägg** — träningsbild + stationer med övningshistorik och ledarstilldelning
 - **Grupper** — generera grupper, drag & drop, målvaktszon, otilldelad pool. Checkbox **"Använd historik"** viktar par som ofta hamnat ihop negativt (60 swap-försök, nivåbalans prioriteras). **Håll isär**-par är alltid aktiva (vikt 1000).
+- **Träningskort** — knapp "Skicka uppdelat" (mobil, endast om `navigator.share` + `navigator.canShare` finns och träningsbild finns) delar träningsbild och gruppbild som två separata filer via Web Share API. "Dela bild"/"Spara bild" heter olika beroende på om Web Share används.
 
 ### Trupp (separat flik)
 - Kollapsabara "Lägg till"-formulär för spelare och ledare
@@ -115,7 +124,7 @@ Drive-token sparas i `sessionStorage` (försvinner när fliken stängs).
 Skyddas av lösenord (SHA-256, `hhc-settings-pwd`). Lösenord väljs första gången fliken öppnas. Ingen återställning — glömt lösenord kräver manuell rensning av localStorage. Session-variabel `_settingsUnlocked` återställs vid sidladdning.
 - **Generella inställningar** — "Använd positioner"-toggle (tidigare i Trupp-fliken). Renderas dynamiskt, `#usePositionsToggle` finns bara när inställningar är upplåsta.
 - **Grupphistorik** — lista över de 10 senaste träningskorten (sparas när träningskortet visas). Radera enskilda poster eller rensa all historik.
-- **Håll isär** — spelarpar som algoritmen försöker separera vid gruppgenerering. Om separation ej möjlig pga nivåbalans → garanterat samma färg (samma lag). Alltid aktivt, oberoende av historik-checkbox.
+- **Håll isär** — spelarpar som algoritmen försöker separera vid gruppgenerering. Alltid aktivt, oberoende av historik-checkbox. Se pipeline nedan.
 
 ---
 
