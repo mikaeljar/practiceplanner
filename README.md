@@ -7,7 +7,7 @@ A single-file web app for planning ice hockey practices — managing rosters, at
 ## Features
 
 ### Roster management
-- Add players with name, jersey number, level (A/B/C), and position (Forward, Center, Defence, Goalie)
+- Add players with name, jersey number, level (A/B/C/D/E), and position (Forward, Center, Defence, Goalie)
 - Add coaches with role (On-ice, Off-ice, Goalie coach)
 - Import rosters from JSON or Excel-exported data
 - Save and load rosters locally or via Google Drive
@@ -16,11 +16,15 @@ A single-file web app for planning ice hockey practices — managing rosters, at
 - Mark each player and coach as attending, absent, or unknown
 - Bulk actions: mark all in / all out / reset
 - Attendance summary by player type and coach role
+- Add guest players for a single session — not saved to the roster
 
 ### Group generator
 - Automatically split attending players into groups
 - Methods: mixed levels, by level, or random
 - Optional position-aware grouping (ideal slot distribution)
+- **History-weighted grouping** — avoids pairing players who have been grouped together frequently before
+- **Hold apart** — define player pairs that should always be placed in different groups; falls back to same jersey colour if separation is not possible without breaking level balance
+- Jersey colours within each group are balanced to spread levels evenly across the two colours
 - Drag-and-drop players between groups on desktop
 - Long-press to move players on mobile
 - Separate goalie zone
@@ -46,6 +50,13 @@ A single-file web app for planning ice hockey practices — managing rosters, at
 ### Practice card
 - Generate a visual training card with groups, stations, and image
 - Copy as text or save as image
+- **Share separately** (mobile) — share the practice diagram and the group image as two separate files via the system share sheet
+
+### Settings
+- Password-protected settings tab
+- Group history — browse and delete snapshots of the last 10 generated group sets
+- Hold apart — manage player pairs to separate during group generation
+- Toggle position-aware grouping
 
 ## Technology
 
