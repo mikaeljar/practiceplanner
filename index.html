@@ -4104,7 +4104,13 @@ function applyHoldApartColors(groups){
       const p1=g.players.find(p=>p.name===pair.player1);
       const p2=g.players.find(p=>p.name===pair.player2);
       if(!p1||!p2)return;
-      if(p1.jerseyColour!==p2.jerseyColour)p2.jerseyColour=p1.jerseyColour; // samma lag
+      if(p1.jerseyColour!==p2.jerseyColour){
+        const oldColour=p2.jerseyColour;
+        p2.jerseyColour=p1.jerseyColour;
+        // Rebalance: swap another player with p1's colour to p2's old colour
+        const other=g.players.find(p=>p!==p1&&p!==p2&&p.jerseyColour===p1.jerseyColour);
+        if(other)other.jerseyColour=oldColour;
+      }
     });
   });
 }
