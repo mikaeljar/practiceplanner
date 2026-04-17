@@ -924,9 +924,7 @@ function practiceImageSelected(e){
   const file=e.target.files[0]; if(!file)return;
   const reader=new FileReader();
   reader.onload=ev=>{
-    practiceImageData=ev.target.result;
-    document.getElementById('practiceImageEl').src=practiceImageData;
-    document.getElementById('practiceImagePreview').style.display='block';
+    setPracticeImage(ev.target.result);
   };
   reader.readAsDataURL(file);
 }
@@ -936,6 +934,17 @@ function clearPracticeImage(){
   document.getElementById('practiceImageEl').src='';
   document.getElementById('practiceImagePreview').style.display='none';
   document.getElementById('practiceImageInput').value='';
+}
+function setPracticeImage(data){
+  practiceImageData=data;
+  const el=document.getElementById('practiceImageEl');
+  const prev=document.getElementById('practiceImagePreview');
+  if(el)el.src=data;
+  if(prev)prev.style.display='block';
+}
+function togglePool(show){
+  const el=document.getElementById('unassignedPool');
+  if(el)el.style.display=show?'block':'none';
 }
 
 // ── Storage ───────────────────────────────────────────────────────────
@@ -1024,19 +1033,21 @@ function loadFromStorage(){
         document.getElementById('practiceImageEl').src=img;
         document.getElementById('practiceImagePreview').style.display='block';
       }
-    }catch(e){}
+    }catch(e){console.error('loadFromStorage() failed:',e);}
     return !!(players.length||coaches.length);
-  }catch{return false;}
+  }catch(e){console.error('loadFromStorage() parse error:',e);return false;}
 }
 
 // ── Tab navigation ────────────────────────────────────────────────────
 let currentTop='plan',currentSub='attendance';
+// Show only the active panel and mark the matching tab button active
+function showTabPanels(ids,activeId){
+  ids.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=id===activeId?'':'none';});
+}
 function switchTopTab(t){
   if(currentTop==='settings'&&t!=='settings')_settingsUnlocked=false;
   currentTop=t;
-  document.getElementById('top-plan').style.display=t==='plan'?'':'none';
-  document.getElementById('top-roster').style.display=t==='roster'?'':'none';
-  document.getElementById('top-settings').style.display=t==='settings'?'':'none';
+  showTabPanels(['top-plan','top-roster','top-settings'],'top-'+t);
   document.getElementById('practiceBand').style.display=t==='plan'?'':'none';
   document.querySelectorAll('.top-tab').forEach((el,i)=>el.classList.toggle('active',['plan','roster','settings'][i]===t));
   if(t==='plan'&&currentSub==='attendance')renderAttendance();
@@ -1044,9 +1055,7 @@ function switchTopTab(t){
 }
 function switchSubTab(t){
   currentSub=t;
-  document.getElementById('sub-attendance').style.display=t==='attendance'?'':'none';
-  document.getElementById('sub-practice').style.display=t==='practice'?'':'none';
-  document.getElementById('sub-groups').style.display=t==='groups'?'':'none';
+  showTabPanels(['sub-attendance','sub-practice','sub-groups'],'sub-'+t);
   document.querySelectorAll('.sub-tab').forEach((el,i)=>el.classList.toggle('active',['attendance','practice','groups'][i]===t));
   if(t==='attendance')renderAttendance();
   if(t==='practice')renderStations();
@@ -1119,7 +1128,7 @@ function setAtt(type,id,val){
     const isGoalie=goaliesInGroup.includes(item.id);
     if(!inGroup&&!inPool&&!isGoalie){
       poolPlayers.push(item);
-      document.getElementById('unassignedPool').style.display='block';
+      togglePool(true);
       save();
     }
   }
@@ -1513,6 +1522,11 @@ const JERSEY_COLOURS=[
   {name:'Vit',hex:'#e5e7eb'},{name:'Svart',hex:'#374151'},
   {name:'Rosa',hex:'#ec4899'},{name:'Turkos',hex:'#14b8a6'},
 ];
+// O(1) lookup map by hex colour
+const COLOUR_MAP=new Map(JERSEY_COLOURS.map(c=>[c.hex,c]));
+// Shared SVG icons used in rendered HTML templates
+const ICON_DELETE='<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3.5h9M5 3.5V2.5h3v1M5.5 6v4M7.5 6v4M3 3.5l.6 7h5.8l.6-7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_ABSENT='<svg class="absent-icon" viewBox="0 0 14 14" fill="none" title="Markerad som borta"><path d="M7 2.5L12 11H2L7 2.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 6v2.5M7 10h.01" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 // Default: Blue + Yellow for every group
 const COL1='#3b82f6',COL2='#eab308';
 
@@ -1532,7 +1546,7 @@ function generateGroups(){
   const fieldIn=players.filter(p=>p.attendance==='yes'&&!goaliesInGroup.includes(p.id));
   if(!fieldIn.length&&!goaliesInGroup.length){
     document.getElementById('groupsArea').innerHTML='<div class="empty-state">No players marked as attending.</div>';
-    document.getElementById('unassignedPool').style.display='none';
+    togglePool(false);
     document.getElementById('textOutputBtn').disabled=true;
     document.getElementById('cardOutputBtn').disabled=true;
     renderGoaliePanel();
@@ -1716,7 +1730,7 @@ function deleteGroup(gi){
     g.players.forEach(p=>{
       if(!poolPlayers.some(pl=>String(pl.id)===String(p.id)))poolPlayers.push(p);
     });
-    document.getElementById('unassignedPool').style.display='block';
+    togglePool(true);
   }
   groups.splice(gi,1);
   // If no groups left, disable output buttons and reset add-group btn
@@ -1732,7 +1746,7 @@ function clearGroups(){
   groups=[];poolPlayers=[];goaliesInGroup=[];
   document.getElementById('groupsArea').innerHTML='<div class="empty-state">Markera närvaro först, generera sedan grupper.</div>';
   document.getElementById('warnBox').innerHTML='';
-  document.getElementById('unassignedPool').style.display='none';
+  togglePool(false);
   document.getElementById('textOutputBtn').disabled=true;
   document.getElementById('cardOutputBtn').disabled=true;
   const addGroupBtn=document.getElementById('addGroupBtn');
@@ -1904,7 +1918,11 @@ function playerSheetDelete(id){
   if(!confirm('Ta bort denna spelare?'))return;
   players=players.filter(p=>String(p.id)!==String(id));save();renderAll();
 }
-document.getElementById('playerSheetOverlay').addEventListener('click',function(e){if(e.target===this)closePlayerSheet();});
+// Helper: close an action-sheet or overlay when user taps the backdrop
+function attachOverlayClose(id,closeFn){
+  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeFn();});
+}
+attachOverlayClose('playerSheetOverlay',closePlayerSheet);
 
 // ── Coach edit sheet ──────────────────────────────────────────────────
 function openCoachSheet(id){
@@ -1935,7 +1953,7 @@ function coachSheetDelete(id){
   stations.forEach(s=>{s.coaches=s.coaches.filter(cid=>String(cid)!==String(id));});
   save();renderAll();
 }
-document.getElementById('coachSheetOverlay').addEventListener('click',function(e){if(e.target===this)closeCoachSheet();});
+attachOverlayClose('coachSheetOverlay',closeCoachSheet);
 
 function removeAbsentFromGroup(pid,fromGi){
   closeActionSheet();
@@ -1978,19 +1996,72 @@ function actionSheetMove(pid,toGi,fromZone,fromGi){
   save();renderGroups();renderGoaliePanel();
 }
 
-// Close action sheet on overlay background tap
-document.getElementById('actionSheetOverlay').addEventListener('click',function(e){
-  if(e.target===this)closeActionSheet();
-});
+attachOverlayClose('actionSheetOverlay',closeActionSheet);
 
 // ── Drag state ────────────────────────────────────────────────────────
 let dragPlayerId=null,dragFromGroup=null;
+
+function renderGroupPlayerRow(p,g,gi,posMode){
+  const jc=g.fullColour?g.colour:(p.jerseyColour||g.colour);
+  return `<div class="group-player${p.attendance==='no'?' absent-warning':''}" draggable="true" data-pid="${p.id}" data-gi="${gi}"
+    ondragstart="playerDragStart(event)" ondragend="onDragEnd(event)"
+    ontouchstart="startLongPress(event,'${p.id}',${gi},'group')" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()">
+    <button class="jersey-btn${g.fullColour?' full':''}" style="background:${jc}"
+      title="${g.fullColour?'Full colour mode':'Click to switch jersey'}"
+      data-pid="${p.id}" data-gi="${gi}"
+      onclick="jerseyBtnClick(event)"></button>
+    ${posMode&&p.position!=='goalie'?`<button class="badge pos${!effPos(p)?' null-pos':''}" style="cursor:pointer;border:none;" title="Klicka för att ändra position" onclick="togglePlayerPosition(${gi},'${p.id}')">${posLabel(effPos(p))}</button>`:''}
+    <span class="gp-name${p.attendance==='no'?' absent':''}">${esc(p.name)}</span>
+    ${p.number?`<span class="gp-num">#${esc(p.number)}</span>`:''}
+    ${p.attendance==='no'?ICON_ABSENT:''}
+    ${p.position==='goalie'?`<span class="badge goalie">MV</span>`:`<span class="gp-level">${p.level.toUpperCase()}</span>`}
+  </div>`;
+}
+
+function renderGroupCard(g,gi,posMode){
+  const bar=g.fullColour?`background:${g.colour}`:`background:linear-gradient(90deg,${g.colour} 50%,${g.colour2} 50%)`;
+  const sortedPlayers=posMode?sortedGroupPlayersByPosition(g):sortedGroupPlayers(g);
+  return `<div class="group-card" id="gc-${gi}">
+    <div class="group-colour-bar" style="${bar}"></div>
+    <div class="group-body">
+      <div class="group-header">
+        <span class="group-name">Grupp ${gi+1}</span>
+        <div class="colour-picker-wrap">
+          ${g.fullColour
+            ?`<button class="colour-swatch full-colour" style="background:${g.colour}" title="Färg" onclick="toggleColourPicker(event,${gi},1)"></button>`
+            :`<button class="colour-swatch" style="background:${g.colour}" title="Färg 1" onclick="toggleColourPicker(event,${gi},1)"></button>
+             <button class="colour-swatch" style="background:${g.colour2}" title="Färg 2" onclick="toggleColourPicker(event,${gi},2)"></button>`
+          }
+          <div class="colour-dropdown" id="cp-${gi}">
+            <div class="colour-dropdown-title" id="cp-title-${gi}">Färg</div>
+            <div class="colour-swatches">${JERSEY_COLOURS.map(jc=>`<div class="colour-opt" style="background:${jc.hex}" title="${jc.name}" onclick="setGroupColour(${gi},'${jc.hex}')"></div>`).join('')}</div>
+            <div class="colour-mode-toggle">
+              <button class="colour-mode-btn${g.fullColour?'':' active'}" onclick="setColourMode(${gi},false)">Split</button>
+              <button class="colour-mode-btn${g.fullColour?' active':''}" onclick="setColourMode(${gi},true)">Full</button>
+            </div>
+          </div>
+        </div>
+        <button class="sort-colour-btn" data-gi="${gi}" onclick="sortGroupByColour(${gi})" title="Sortera spelare efter tröjfärg">&#8645;</button>
+        <span class="group-count">${g.players.length}p</span>
+        <button class="group-delete-btn" onclick="deleteGroup(${gi})" title="Ta bort grupp">${ICON_DELETE}</button>
+      </div>
+      <div class="group-players-drop" id="gp-${gi}"
+        ondragover="onDragOver(event,${gi})"
+        ondrop="onDrop(event,${gi})"
+        ondragleave="onDragLeave(event,${gi})">
+        ${sortedPlayers.map(p=>renderGroupPlayerRow(p,g,gi,posMode)).join('')}
+      </div>
+    </div>
+  </div>`;
+}
 
 function renderGroups(){
   const area=document.getElementById('groupsArea');
   const warn=document.getElementById('warnBox');
   warn.innerHTML='';
   if(!groups.length){area.innerHTML='<div class="empty-state">Markera närvaro först, generera sedan grupper.</div>';return;}
+  // Cache posMode once — avoids repeated DOM queries inside the map
+  const posMode=usePositions&&!!document.getElementById('groupUsePositions')?.checked;
   const size=Math.max(1,parseInt(document.getElementById('groupSize').value)||6);
   const smallGroups=groups.map((g,i)=>({i,n:g.players.length})).filter(x=>x.n<size);
   if(smallGroups.length)
@@ -2003,67 +2074,13 @@ function renderGroups(){
       <button class="btn sm" id="addGroupBtn" onclick="addEmptyGroup()">+ Grupp</button>
     </div>
   </div>
-  <div class="groups-grid">${groups.map((g,gi)=>{
-    const bar=g.fullColour?`background:${g.colour}`:`background:linear-gradient(90deg,${g.colour} 50%,${g.colour2} 50%)`;
-    return `<div class="group-card" id="gc-${gi}">
-      <div class="group-colour-bar" style="${bar}"></div>
-      <div class="group-body">
-        <div class="group-header">
-          <span class="group-name">Grupp ${gi+1}</span>
-          <div class="colour-picker-wrap">
-            ${g.fullColour
-              ?`<button class="colour-swatch full-colour" style="background:${g.colour}" title="Färg" onclick="toggleColourPicker(event,${gi},1)"></button>`
-              :`<button class="colour-swatch" style="background:${g.colour}" title="Färg 1" onclick="toggleColourPicker(event,${gi},1)"></button>
-               <button class="colour-swatch" style="background:${g.colour2}" title="Färg 2" onclick="toggleColourPicker(event,${gi},2)"></button>`
-            }
-            <div class="colour-dropdown" id="cp-${gi}">
-              <div class="colour-dropdown-title" id="cp-title-${gi}">Färg</div>
-              <div class="colour-swatches">${JERSEY_COLOURS.map(jc=>`<div class="colour-opt" style="background:${jc.hex}" title="${jc.name}" onclick="setGroupColour(${gi},'${jc.hex}')"></div>`).join('')}</div>
-              <div class="colour-mode-toggle">
-                <button class="colour-mode-btn${g.fullColour?'':' active'}" onclick="setColourMode(${gi},false)">Split</button>
-                <button class="colour-mode-btn${g.fullColour?' active':''}" onclick="setColourMode(${gi},true)">Full</button>
-              </div>
-            </div>
-          </div>
-          <button class="sort-colour-btn" data-gi="${gi}" onclick="sortGroupByColour(${gi})" title="Sortera spelare efter tröjfärg">&#8645;</button>
-          <span class="group-count">${g.players.length}p</span>
-          <button class="group-delete-btn" onclick="deleteGroup(${gi})" title="Ta bort grupp">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3.5h9M5 3.5V2.5h3v1M5.5 6v4M7.5 6v4M3 3.5l.6 7h5.8l.6-7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-        <div class="group-players-drop" id="gp-${gi}"
-          ondragover="onDragOver(event,${gi})"
-          ondrop="onDrop(event,${gi})"
-          ondragleave="onDragLeave(event,${gi})">
-          ${(usePositions&&document.getElementById('groupUsePositions')?.checked?sortedGroupPlayersByPosition(g):sortedGroupPlayers(g)).map(p=>{
-            const jc=g.fullColour?g.colour:(p.jerseyColour||g.colour);
-            return `<div class="group-player${p.attendance==='no'?' absent-warning':''}" draggable="true" data-pid="${p.id}" data-gi="${gi}"
-              ondragstart="playerDragStart(event)" ondragend="onDragEnd(event)"
-              ontouchstart="startLongPress(event,'${p.id}',${gi},'group')" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()">
-              <button class="jersey-btn${g.fullColour?' full':''}" style="background:${jc}"
-                title="${g.fullColour?'Full colour mode':'Click to switch jersey'}"
-                data-pid="${p.id}" data-gi="${gi}"
-                onclick="jerseyBtnClick(event)"></button>
-              ${usePositions&&p.position!=='goalie'?`<button class="badge pos${!effPos(p)?' null-pos':''}" style="cursor:pointer;border:none;" title="Klicka för att ändra position" onclick="togglePlayerPosition(${gi},'${p.id}')">${posLabel(effPos(p))}</button>`:''}
-              <span class="gp-name${p.attendance==='no'?' absent':''}">${esc(p.name)}</span>
-              ${p.number?`<span class="gp-num">#${esc(p.number)}</span>`:''}
-              ${p.attendance==='no'?`<svg class="absent-icon" viewBox="0 0 14 14" fill="none" title="Markerad som borta"><path d="M7 2.5L12 11H2L7 2.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 6v2.5M7 10h.01" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`:''}
-              ${p.position==='goalie'?`<span class="badge goalie">MV</span>`:`<span class="gp-level">${p.level.toUpperCase()}</span>`}
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-    </div>`;
-  }).join('')}</div>`;
+  <div class="groups-grid">${groups.map((g,gi)=>renderGroupCard(g,gi,posMode)).join('')}</div>`;
 
-  document.getElementById('unassignedPool').style.display='block';
+  togglePool(true);
   const poolTitle=document.getElementById('poolTitle');
-  if(poolTitle){
-    const posMode=usePositions&&document.getElementById('groupUsePositions')?.checked;
-    poolTitle.textContent=posMode
-      ?'Ej fördelade (saknar position eller ojämnt antal) — dra till en grupp'
-      :'Otilldelad — dra till en grupp';
-  }
+  if(poolTitle)poolTitle.textContent=posMode
+    ?'Ej fördelade (saknar position eller ojämnt antal) — dra till en grupp'
+    :'Otilldelad — dra till en grupp';
   renderPool();
   document.addEventListener('click',closeAllColourPickers,{once:true});
 }
@@ -2262,8 +2279,8 @@ function dropToPool(){
 }
 
 // ── Text / Card output ────────────────────────────────────────────────
-function colourAbbr(hex){const jc=JERSEY_COLOURS.find(c=>c.hex===hex);return jc?jc.name.slice(0,1).toUpperCase():'?';}
-function colourName(hex){const jc=JERSEY_COLOURS.find(c=>c.hex===hex);return jc?jc.name:'?';}
+function colourAbbr(hex){const jc=COLOUR_MAP.get(hex);return jc?jc.name.slice(0,1).toUpperCase():'?';}
+function colourName(hex){const jc=COLOUR_MAP.get(hex);return jc?jc.name:'?';}
 const WEEKDAYS=['Söndag','Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag'];
 function getDateStr(){
   const v=document.getElementById('practiceDate').value;
@@ -2428,7 +2445,7 @@ function newPracticeClear(){
   document.getElementById('cardOutputBtn').disabled=true;
   document.getElementById('groupsArea').innerHTML='<div class="empty-state">Markera närvaro först, generera sedan grupper.</div>';
   document.getElementById('warnBox').innerHTML='';
-  document.getElementById('unassignedPool').style.display='none';
+  togglePool(false);
   document.getElementById('goalieAttendPanel').style.display='none';
   save();
   renderAll();
@@ -2762,7 +2779,7 @@ function loadPracticeData(d,name){
     goaliesInGroup=(d.goaliesInGroup||[]).map(n=>players.find(p=>p.name===n)?.id).filter(Boolean);
     poolPlayers=(d.poolPlayers||[]).map(n=>players.find(p=>p.name===n)).filter(Boolean);
   }
-  if(d.practiceImageData){practiceImageData=d.practiceImageData;try{document.getElementById('practiceImageEl').src=practiceImageData;document.getElementById('practiceImagePreview').style.display='block';}catch(e){}}
+  if(d.practiceImageData){setPracticeImage(d.practiceImageData);}
   else clearPracticeImage();
   save();renderAll();
   if(groups.length){document.getElementById('textOutputBtn').disabled=false;document.getElementById('cardOutputBtn').disabled=false;const ab=document.getElementById('addGroupBtn');if(ab)ab.style.display='';}
@@ -3016,8 +3033,7 @@ function doApplyTemplate(d,name){
     stations[i].drill=ds.drill||'';
   });
   if(d.practiceImageData){
-    practiceImageData=d.practiceImageData;
-    try{document.getElementById('practiceImageEl').src=practiceImageData;document.getElementById('practiceImagePreview').style.display='block';}catch(e){}
+    setPracticeImage(d.practiceImageData);
   } else {
     clearPracticeImage();
   }
@@ -3179,7 +3195,7 @@ function addGuest(){
       if(!goaliesInGroup.includes(guest.id))goaliesInGroup.push(guest.id);
     } else {
       if(!poolPlayers.some(p=>String(p.id)===String(guest.id)))poolPlayers.push(guest);
-      document.getElementById('unassignedPool').style.display='block';
+      togglePool(true);
     }
   }
   document.getElementById('guestName').value='';
@@ -3738,7 +3754,7 @@ async function driveLoadPractice(fileId,filename){
       goaliesInGroup=(d.goaliesInGroup||[]).map(name=>players.find(p=>p.name===name)?.id).filter(Boolean);
       poolPlayers=(d.poolPlayers||[]).map(name=>players.find(p=>p.name===name)).filter(Boolean);
     }
-    if(d.practiceImageData){practiceImageData=d.practiceImageData;try{document.getElementById('practiceImageEl').src=practiceImageData;document.getElementById('practiceImagePreview').style.display='block';}catch(ex){}}
+    if(d.practiceImageData){setPracticeImage(d.practiceImageData);}
     else clearPracticeImage();
     save();renderAll();
     if(groups.length){document.getElementById('textOutputBtn').disabled=false;document.getElementById('cardOutputBtn').disabled=false;const ab=document.getElementById('addGroupBtn');if(ab)ab.style.display='';}
